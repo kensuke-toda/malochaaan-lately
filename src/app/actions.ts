@@ -14,10 +14,11 @@ async function requireUser() {
 
 async function uploadImage(bucket: string, file: File) {
   const supabase = await createUserClient();
-  const ext = file.name.split(".").pop() || "jpg";
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
   const path = `${randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
-    contentType: file.type,
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const { error } = await supabase.storage.from(bucket).upload(path, bytes, {
+    contentType: file.type || "image/jpeg",
     upsert: false,
   });
   if (error) {
@@ -35,11 +36,15 @@ function revalidateAll() {
 export async function createThingAction(formData: FormData) {
   const user = await requireUser();
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) throw new Error("商品名は必須です");
-  const image = formData.get("image") as File | null;
+  if (!name) return { error: "商品名は必須です" };
+  const image = formData.get("image");
   let originalImageUrl: string | null = null;
-  if (image && image.size > 0) {
-    originalImageUrl = await uploadImage("things-images", image);
+  if (image instanceof File && image.size > 0) {
+    try {
+      originalImageUrl = await uploadImage("things-images", image);
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
+    }
   }
   const supabase = await createUserClient();
   const { error } = await supabase.from("things").insert({
@@ -50,18 +55,22 @@ export async function createThingAction(formData: FormData) {
     original_image_url: originalImageUrl,
     created_by: user.id,
   });
-  if (error) throw new Error(`保存に失敗しました: ${error.message}`);
+  if (error) return { error: `保存に失敗しました: ${error.message}` };
   revalidateAll();
 }
 
 export async function createPlaceAction(formData: FormData) {
   const user = await requireUser();
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) throw new Error("店名は必須です");
-  const image = formData.get("image") as File | null;
+  if (!name) return { error: "店名は必須です" };
+  const image = formData.get("image");
   let imageUrl: string | null = null;
-  if (image && image.size > 0) {
-    imageUrl = await uploadImage("places-images", image);
+  if (image instanceof File && image.size > 0) {
+    try {
+      imageUrl = await uploadImage("places-images", image);
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
+    }
   }
   const supabase = await createUserClient();
   const { error } = await supabase.from("places").insert({
@@ -71,18 +80,22 @@ export async function createPlaceAction(formData: FormData) {
     image_url: imageUrl,
     created_by: user.id,
   });
-  if (error) throw new Error(`保存に失敗しました: ${error.message}`);
+  if (error) return { error: `保存に失敗しました: ${error.message}` };
   revalidateAll();
 }
 
 export async function createBookAction(formData: FormData) {
   const user = await requireUser();
   const title = String(formData.get("title") ?? "").trim();
-  if (!title) throw new Error("書名は必須です");
-  const image = formData.get("image") as File | null;
+  if (!title) return { error: "書名は必須です" };
+  const image = formData.get("image");
   let imageUrl: string | null = null;
-  if (image && image.size > 0) {
-    imageUrl = await uploadImage("books-images", image);
+  if (image instanceof File && image.size > 0) {
+    try {
+      imageUrl = await uploadImage("books-images", image);
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
+    }
   }
   const status = String(formData.get("status") ?? "finished");
   const supabase = await createUserClient();
@@ -94,18 +107,22 @@ export async function createBookAction(formData: FormData) {
     image_url: imageUrl,
     created_by: user.id,
   });
-  if (error) throw new Error(`保存に失敗しました: ${error.message}`);
+  if (error) return { error: `保存に失敗しました: ${error.message}` };
   revalidateAll();
 }
 
 export async function createSoundAction(formData: FormData) {
   const user = await requireUser();
   const title = String(formData.get("title") ?? "").trim();
-  if (!title) throw new Error("曲名は必須です");
-  const image = formData.get("image") as File | null;
+  if (!title) return { error: "曲名は必須です" };
+  const image = formData.get("image");
   let imageUrl: string | null = null;
-  if (image && image.size > 0) {
-    imageUrl = await uploadImage("sounds-images", image);
+  if (image instanceof File && image.size > 0) {
+    try {
+      imageUrl = await uploadImage("sounds-images", image);
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
+    }
   }
   const supabase = await createUserClient();
   const { error } = await supabase.from("sounds").insert({
@@ -116,14 +133,14 @@ export async function createSoundAction(formData: FormData) {
     image_url: imageUrl,
     created_by: user.id,
   });
-  if (error) throw new Error(`保存に失敗しました: ${error.message}`);
+  if (error) return { error: `保存に失敗しました: ${error.message}` };
   revalidateAll();
 }
 
 export async function createPostAction(formData: FormData) {
   const user = await requireUser();
   const title = String(formData.get("title") ?? "").trim();
-  if (!title) throw new Error("タイトルは必須です");
+  if (!title) return { error: "タイトルは必須です" };
   const supabase = await createUserClient();
   const { data: post, error } = await supabase
     .from("posts")
@@ -135,17 +152,24 @@ export async function createPostAction(formData: FormData) {
     })
     .select()
     .single();
-  if (error || !post) throw new Error(`保存に失敗しました: ${error?.message}`);
+  if (error || !post) return { error: `保存に失敗しました: ${error?.message}` };
 
-  const photos = (formData.getAll("photos") as File[]).filter((p) => p && p.size > 0);
+  const photos = formData
+    .getAll("photos")
+    .filter((p): p is File => p instanceof File && p.size > 0);
   for (let i = 0; i < photos.length; i++) {
-    const url = await uploadImage("posts-images", photos[i]);
+    let url: string;
+    try {
+      url = await uploadImage("posts-images", photos[i]);
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
+    }
     const { error: photoError } = await supabase.from("post_photos").insert({
       post_id: post.id,
       image_url: url,
       sort_order: i,
     });
-    if (photoError) throw new Error(`写真の保存に失敗しました: ${photoError.message}`);
+    if (photoError) return { error: `写真の保存に失敗しました: ${photoError.message}` };
   }
   revalidateAll();
 }
@@ -153,7 +177,7 @@ export async function createPostAction(formData: FormData) {
 export async function createWorkAction(formData: FormData) {
   const user = await requireUser();
   const title = String(formData.get("title") ?? "").trim();
-  if (!title) throw new Error("タイトルは必須です");
+  if (!title) return { error: "タイトルは必須です" };
   const supabase = await createUserClient();
   const { error } = await supabase.from("works").insert({
     title,
@@ -161,7 +185,7 @@ export async function createWorkAction(formData: FormData) {
     summary: String(formData.get("summary") ?? "").trim() || null,
     created_by: user.id,
   });
-  if (error) throw new Error(`保存に失敗しました: ${error.message}`);
+  if (error) return { error: `保存に失敗しました: ${error.message}` };
   revalidateAll();
 }
 

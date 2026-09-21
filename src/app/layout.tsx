@@ -1,5 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Nunito_Sans } from "next/font/google";
+import { AddFlowProvider } from "@/components/add-flow";
+import { AppFrame } from "@/components/app-frame";
+import { BootSplash } from "@/components/boot-splash";
+import { getSessionUser } from "@/lib/auth";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -15,12 +19,31 @@ const nunito = Nunito_Sans({
 export const metadata: Metadata = {
   title: "Lately",
   description: "Ken とパートナーの近況。行った場所と、好きなもの。",
+  applicationName: "Lately",
+  appleWebApp: {
+    capable: true,
+    title: "Lately",
+    statusBarStyle: "default",
+  },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#E8DFD0",
+};
+
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const user = await getSessionUser();
   return (
-    <html lang="ja" className={`${fraunces.variable} ${nunito.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-[#E8DFD0] text-[#2F2A24]">{children}</body>
+    <html lang="ja" className={`${fraunces.variable} ${nunito.variable} h-full w-full antialiased`}>
+      <body className="min-h-full w-full bg-[#E8DFD0] text-[#2F2A24]">
+        <BootSplash />
+        <AddFlowProvider loggedIn={Boolean(user)}>
+          <AppFrame loggedIn={Boolean(user)}>{children}</AppFrame>
+        </AddFlowProvider>
+      </body>
     </html>
   );
 }

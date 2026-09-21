@@ -22,8 +22,8 @@ export default async function AdminPage() {
   const data = await fetchHomeData();
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="w-full py-2">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-semibold">管理画面</h1>
           <p className="mt-1 text-xs text-[#6B6258]">{user.displayName} としてログイン中</p>
@@ -120,10 +120,10 @@ function AdminList({
       <h2 className="mb-3 font-display text-lg font-semibold">{title}</h2>
       <ul className="divide-y divide-[#2F2A24]/10 rounded-xl bg-[#F4EEE4]">
         {rows.map((row) => (
-          <li key={row.id} className="flex items-center justify-between px-4 py-3 text-sm">
-            <span>{row.label}</span>
+          <li key={row.id} className="flex flex-col gap-1 px-4 py-3 text-sm sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+            <span className="min-w-0 break-words">{row.label}</span>
             {row.mine ? (
-              <form action={action}>
+              <form action={action} className="shrink-0">
                 <input type="hidden" name="id" value={row.id} />
                 <button type="submit" className="text-[#B85C38] underline">
                   削除

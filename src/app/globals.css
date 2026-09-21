@@ -7,8 +7,23 @@
 
 html,
 body {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
   background: #e8dfd0;
   color: #2f2a24;
+}
+
+img,
+video,
+canvas {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea {
+  max-width: 100%;
 }
 
 body {
@@ -17,4 +32,10 @@ body {
 
 .font-display {
   font-family: var(--font-fraunces), Fraunces, serif;
+}
+
+.glass-surface {
+  background: rgba(244, 238, 228, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }

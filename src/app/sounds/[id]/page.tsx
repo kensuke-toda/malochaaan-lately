@@ -15,18 +15,18 @@ export default async function SoundDetailPage({ params }: { params: Promise<{ id
   if (!sound) notFound();
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-16">
+    <div className="mx-auto w-full max-w-xl py-2">
       <Link href="/#sounds" className="text-sm text-[#6B6258]">
         ← 戻る
       </Link>
-      <div className="mt-6 flex gap-5">
+      <div className="mt-6 flex items-start gap-4 sm:gap-5">
         {sound.image_url && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={sound.image_url} alt={sound.title} className="h-32 w-32 rounded-xl object-cover sm:h-40 sm:w-40" />
+          <img src={sound.image_url} alt={sound.title} className="h-28 w-28 shrink-0 rounded-xl object-cover sm:h-40 sm:w-40" />
         )}
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-xs text-[#6B6258]">{authorName(sound)}が投稿</p>
-          <h1 className="mt-1 font-display text-2xl font-semibold">{sound.title}</h1>
+          <h1 className="mt-1 font-display text-2xl font-semibold break-words">{sound.title}</h1>
           {sound.artist && <p className="mt-1 text-sm text-[#6B6258]">{sound.artist}</p>}
           {sound.url && (
             <a href={sound.url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm underline underline-offset-2">

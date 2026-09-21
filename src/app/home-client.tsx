@@ -2,19 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import {
-  createBookAction,
-  createPlaceAction,
-  createPostAction,
-  createSoundAction,
-  createThingAction,
-  createWorkAction,
-} from "@/app/actions";
-import { logoutAction } from "@/app/login/actions";
+import { useAddFlow } from "@/components/add-flow";
 import type { HomeData } from "@/lib/data";
 import { authorName, formatDate, toDateKey, todayKey, tokyoNow } from "@/lib/utils";
-
-type ModalKind = "place" | "thing" | "book" | "sound" | "post" | "work" | null;
 
 type HighlightItem = { href: string; label: string };
 
@@ -37,9 +27,9 @@ export function HomeClient({
 }) {
   const now = tokyoNow();
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() });
-  const [modal, setModal] = useState<ModalKind>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(now.getDate());
   const [photo, setPhoto] = useState<{ day: number; index: number } | null>(null);
+  const { openAdd } = useAddFlow();
 
   const monthPrefix = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}`;
 
@@ -118,36 +108,11 @@ export function HomeClient({
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
-      <header className="mb-10 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-semibold">Lately</h1>
-          <p className="mt-1 text-sm text-[#6B6258]">Ken とパートナーの近況。行った場所と、好きなもの。</p>
-          <p className="mt-1 text-xs text-[#6B6258]/70">更新日：{formatDate(todayKey())}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          {loggedIn ? (
-            <>
-              <span className="rounded-full bg-[#F4EEE4] px-3 py-1.5 text-[#6B6258] ring-1 ring-[#2F2A24]/10">
-                {displayName}
-              </span>
-              <form action={logoutAction}>
-                <button type="submit" className="text-xs text-[#6B6258]/60 underline">
-                  ログアウト
-                </button>
-              </form>
-            </>
-          ) : (
-            <Link href="/login" className="rounded-full bg-[#F4EEE4] px-3 py-1.5 text-xs text-[#6B6258] ring-1 ring-[#2F2A24]/10">
-              ログイン
-            </Link>
-          )}
-          {loggedIn && (
-            <Link href="/admin" className="text-xs text-[#6B6258]/60 underline">
-              管理画面
-            </Link>
-          )}
-        </div>
+    <div className="w-full">
+      <header className="mb-8">
+        <p className="text-sm text-[#6B6258]">Ken とパートナーの近況。行った場所と、好きなもの。</p>
+        {displayName ? <p className="mt-1 text-xs text-[#6B6258]">{displayName} としてログイン中</p> : null}
+        <p className="mt-1 text-xs text-[#6B6258]/70">更新日：{formatDate(todayKey())}</p>
       </header>
 
       {!configured && (
@@ -201,7 +166,7 @@ export function HomeClient({
           title="Places"
           note="行ったお店。日付マスにお店の写真が出ます。"
           loggedIn={loggedIn}
-          onAdd={() => setModal("place")}
+          onAdd={() => openAdd("place")}
         />
         <div className="mb-3 flex items-center justify-between text-sm text-[#6B6258]">
           <button type="button" onClick={() => shiftMonth(-1)} className="px-2 py-1">
@@ -214,14 +179,14 @@ export function HomeClient({
             ›
           </button>
         </div>
-        <div className="mb-1 grid grid-cols-7 text-center text-[11px] text-[#6B6258]/70">
+        <div className="mb-1 grid w-full grid-cols-7 text-center text-[11px] text-[#6B6258]/70">
           {["日", "月", "火", "水", "木", "金", "土"].map((d) => (
             <span key={d}>{d}</span>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1.5 text-center text-sm">
+        <div className="grid w-full grid-cols-7 gap-1.5 text-center text-sm">
           {cells.map((day, idx) => {
-            if (day == null) return <span key={idx} className="aspect-square" />;
+            if (day == null) return <span key={idx} className="aspect-square w-full min-w-0" />;
             const key = `${monthPrefix}-${String(day).padStart(2, "0")}`;
             const bundle = calendarItems[key];
             const placePhotos = (bundle?.places ?? []).filter((p) => p.image_url);
@@ -235,7 +200,7 @@ export function HomeClient({
                   setSelectedDay(day);
                   if (placePhotos.length) setPhoto({ day, index: 0 });
                 }}
-                className={`relative aspect-square overflow-hidden rounded-md ${isSelected && cover ? "ring-2 ring-[#B85C38]" : ""} ${!cover ? "hover:bg-[#F4EEE4]" : ""}`}
+                className={`relative aspect-square w-full min-w-0 overflow-hidden rounded-md ${isSelected && cover ? "ring-2 ring-[#B85C38]" : ""} ${!cover ? "hover:bg-[#F4EEE4]" : ""}`}
               >
                 {cover ? (
                   <>
@@ -280,18 +245,18 @@ export function HomeClient({
       </section>
 
       <section id="things" className="mb-16">
-        <SectionHead title="Things" loggedIn={loggedIn} onAdd={() => setModal("thing")} />
+        <SectionHead title="Things" loggedIn={loggedIn} onAdd={() => openAdd("thing")} />
         {data.things.length ? (
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
             {data.things.map((thing) => (
-              <Link key={thing.id} href={`/things/${thing.id}`} className="group">
-                <div className="relative aspect-square overflow-hidden rounded-xl bg-[#F4EEE4]">
+              <Link key={thing.id} href={`/things/${thing.id}`} className="group min-w-0">
+                <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
                   {(thing.processed_image_url || thing.original_image_url) && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={thing.processed_image_url ?? thing.original_image_url ?? ""}
                       alt={thing.name}
-                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                      className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
                     />
                   )}
                   <span className="absolute bottom-1.5 left-1.5 rounded-full bg-[#F4EEE4]/90 px-2 py-0.5 text-[10px]">
@@ -309,15 +274,15 @@ export function HomeClient({
       </section>
 
       <section id="books" className="mb-16">
-        <SectionHead title="Books" loggedIn={loggedIn} onAdd={() => setModal("book")} />
+        <SectionHead title="Books" loggedIn={loggedIn} onAdd={() => openAdd("book")} />
         {data.books.length ? (
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
             {data.books.map((book) => (
-              <Link key={book.id} href={`/books/${book.id}`} className="group">
-                <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-[#F4EEE4]">
+              <Link key={book.id} href={`/books/${book.id}`} className="group min-w-0">
+                <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
                   {book.image_url && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={book.image_url} alt={book.title} className="h-full w-full object-cover" />
+                    <img src={book.image_url} alt={book.title} className="absolute inset-0 h-full w-full object-cover" />
                   )}
                   <span className="absolute left-1.5 top-1.5 rounded-full bg-[#8B5A6B] px-2 py-0.5 text-[10px] text-[#F4EEE4]">
                     {book.status === "reading" ? "読書中" : "読了"}
@@ -334,15 +299,15 @@ export function HomeClient({
       </section>
 
       <section id="sounds" className="mb-16">
-        <SectionHead title="Sounds" loggedIn={loggedIn} onAdd={() => setModal("sound")} />
+        <SectionHead title="Sounds" loggedIn={loggedIn} onAdd={() => openAdd("sound")} />
         {data.sounds.length ? (
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
             {data.sounds.map((sound) => (
-              <Link key={sound.id} href={`/sounds/${sound.id}`}>
-                <div className="aspect-square overflow-hidden rounded-xl bg-[#F4EEE4]">
+              <Link key={sound.id} href={`/sounds/${sound.id}`} className="min-w-0">
+                <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
                   {sound.image_url && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={sound.image_url} alt={sound.title} className="h-full w-full object-cover" />
+                    <img src={sound.image_url} alt={sound.title} className="absolute inset-0 h-full w-full object-cover" />
                   )}
                 </div>
                 <p className="mt-2 text-sm">{sound.title}</p>
@@ -356,7 +321,7 @@ export function HomeClient({
       </section>
 
       <section id="posts" className="mb-16">
-        <SectionHead title="Posts" loggedIn={loggedIn} onAdd={() => setModal("post")} />
+        <SectionHead title="Posts" loggedIn={loggedIn} onAdd={() => openAdd("post")} />
         {data.posts.length ? (
           <ul className="flex flex-col gap-4">
             {data.posts.map((post) => (
@@ -377,7 +342,7 @@ export function HomeClient({
       </section>
 
       <section id="works" className="mb-8">
-        <SectionHead title="Works" loggedIn={loggedIn} onAdd={() => setModal("work")} />
+        <SectionHead title="Works" loggedIn={loggedIn} onAdd={() => openAdd("work")} />
         {data.works.length ? (
           <ul className="flex flex-col gap-4">
             {data.works.map((work) => (
@@ -394,10 +359,6 @@ export function HomeClient({
           <p className="text-sm text-[#6B6258]">まだありません。</p>
         )}
       </section>
-
-      {modal && (
-        <AddModal kind={modal} onClose={() => setModal(null)} />
-      )}
 
       {photoItem && photo && (
         <div
@@ -490,12 +451,12 @@ function SectionHead({
 }) {
   return (
     <div className="mb-4 flex items-end justify-between gap-3">
-      <div>
+      <div className="min-w-0">
         <h2 className="font-display text-xl font-semibold">{title}</h2>
         {note && <p className="text-xs text-[#6B6258]">{note}</p>}
       </div>
       {loggedIn && (
-        <button type="button" onClick={onAdd} className="rounded-full bg-[#B85C38] px-3 py-1.5 text-xs font-semibold text-[#F4EEE4]">
+        <button type="button" onClick={onAdd} className="shrink-0 rounded-full bg-[#B85C38] px-3 py-1.5 text-xs font-semibold text-[#F4EEE4]">
           ＋ 追加
         </button>
       )}
@@ -548,97 +509,3 @@ function DayList({
   );
 }
 
-function AddModal({ kind, onClose }: { kind: Exclude<ModalKind, null>; onClose: () => void }) {
-  const titles: Record<Exclude<ModalKind, null>, string> = {
-    place: "お店を追加",
-    thing: "モノを追加",
-    book: "本を追加",
-    sound: "音楽を追加",
-    post: "投稿を追加",
-    work: "仕事を追加",
-  };
-  const actions = {
-    place: createPlaceAction,
-    thing: createThingAction,
-    book: createBookAction,
-    sound: createSoundAction,
-    post: createPostAction,
-    work: createWorkAction,
-  };
-  const today = todayKey();
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#2F2A24]/40 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="w-full max-w-md rounded-2xl bg-[#F4EEE4] p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-display text-lg font-semibold">{titles[kind]}</h3>
-          <button type="button" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-        <form action={actions[kind]} className="flex flex-col gap-3" onSubmit={() => setTimeout(onClose, 300)}>
-          {kind === "place" && (
-            <>
-              <input name="name" required placeholder="店名（必須）" className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="visited_date" type="date" defaultValue={today} className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <textarea name="memo" placeholder="メモ" rows={2} className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="image" type="file" accept="image/*" />
-            </>
-          )}
-          {kind === "thing" && (
-            <>
-              <input name="name" required placeholder="商品名（必須）" className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="brand" placeholder="ブランド名" className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="product_url" type="url" placeholder="商品ページURL" className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <textarea name="memo" placeholder="メモ" rows={2} className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="image" type="file" accept="image/*" />
-            </>
-          )}
-          {kind === "book" && (
-            <>
-              <input name="title" required placeholder="書名（必須）" className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="author" placeholder="著者" className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <select name="status" defaultValue="finished" className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm">
-                <option value="finished">読了</option>
-                <option value="reading">読書中</option>
-              </select>
-              <textarea name="memo" placeholder="感想・メモ" rows={2} className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="image" type="file" accept="image/*" />
-            </>
-          )}
-          {kind === "sound" && (
-            <>
-              <input name="title" required placeholder="曲名（必須）" className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="artist" placeholder="アーティスト" className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="url" type="url" placeholder="リンク" className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <textarea name="memo" placeholder="メモ" rows={2} className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="image" type="file" accept="image/*" />
-            </>
-          )}
-          {kind === "post" && (
-            <>
-              <input name="entry_date" type="date" defaultValue={today} className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="title" required placeholder="タイトル（必須）" className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <textarea name="body" placeholder="本文" rows={4} className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="photos" type="file" accept="image/*" multiple />
-            </>
-          )}
-          {kind === "work" && (
-            <>
-              <input name="title" required placeholder="タイトル（必須）" className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="period_label" placeholder="期間（例: 2026年9月〜）" className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <textarea name="summary" placeholder="サマリ" rows={4} className="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-            </>
-          )}
-          <button type="submit" className="rounded-full bg-[#B85C38] px-4 py-2.5 text-sm font-semibold text-[#F4EEE4]">
-            追加する
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
