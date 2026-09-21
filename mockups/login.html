@@ -4,48 +4,22 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Lately（モック）— ログイン</title>
-<script>
-  tailwind = { config: {
-    theme: {
-      extend: {
-        colors: {
-          cream: '#F7EFE1', sand: '#EFE1C4', paper: '#FBF6EC',
-          walnut: '#4A3527', clay: '#C1502E', mustard: '#D9A441', teal: '#4F7C73',
-        },
-        fontFamily: {
-          display: ['Fraunces', 'serif'],
-          body: ['"Nunito Sans"', 'sans-serif'],
-        },
-      },
-    },
-  } };
-</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<style>body { background: #E8DFD0; color: #2F2A24; }</style>
 </head>
-<body class="bg-cream font-body text-walnut">
-
+<body class="font-['Nunito_Sans']" style="background-color:#E8DFD0;color:#2F2A24;">
   <div class="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
-    <h1 class="mb-1 font-display text-2xl font-semibold text-clay">Lately</h1>
-    <p class="mb-6 text-sm text-walnut/50">アカウントでログインしてください</p>
-
-    <form class="flex flex-col gap-3 rounded-2xl border border-walnut/10 bg-paper p-5 shadow-sm">
-      <input type="email" placeholder="メールアドレス" class="rounded-xl border border-walnut/15 bg-cream px-3 py-2 text-sm placeholder:text-walnut/35 focus:outline-none focus:ring-2 focus:ring-clay/40" />
-      <input type="password" placeholder="パスワード" class="rounded-xl border border-walnut/15 bg-cream px-3 py-2 text-sm placeholder:text-walnut/35 focus:outline-none focus:ring-2 focus:ring-clay/40" />
-      <button type="button" onclick="location.href='top.html'" class="rounded-full bg-clay px-3 py-2.5 text-sm font-semibold text-paper hover:bg-clay/90">
-        ログイン
-      </button>
+    <h1 class="mb-1 font-['Fraunces'] text-2xl font-semibold">Lately</h1>
+    <p class="mb-6 text-sm text-[#6B6258]">アカウントでログインしてください</p>
+    <form class="flex flex-col gap-3 rounded-2xl bg-[#F4EEE4] p-5">
+      <input type="email" placeholder="メールアドレス" class="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
+      <input type="password" placeholder="パスワード" class="rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
+      <button type="button" onclick="location.href='top.html'" class="rounded-full bg-[#B85C38] px-3 py-2.5 text-sm font-semibold text-[#F4EEE4]">ログイン</button>
     </form>
-
-    <p class="mt-6 text-xs text-walnut/40">
-      アカウントはKenが発行します。サインアップ画面はありません（G7-1決定済み）。
-    </p>
-
-    <footer class="mt-16 border-t border-walnut/10 pt-6 text-xs text-walnut/30">
-      Mockup（G1-4）— docs/WBS.md 参照
-    </footer>
+    <p class="mt-6 text-xs text-[#6B6258]">アカウントはKenが発行します。サインアップ画面はありません（G7-1決定済み）。</p>
+    <footer class="mt-16 border-t border-[#2F2A24]/10 pt-6 text-xs text-[#6B6258]/50">Mockup（G1-4）</footer>
   </div>
-
 </body>
 </html>
