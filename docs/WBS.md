@@ -138,6 +138,8 @@
 
 ## GitHub Issues / Projectsとの同期方法
 
+- **Issues**: https://github.com/kensuke-toda/malochaaan-lately/issues （G0〜G7、Milestone: `Phase 1: 方針変更対応（マルチユーザー化）`）
+- **Project board**: https://github.com/users/kensuke-toda/projects/1 （「Lately WBS」、全Issueを追加済み）
 - 本ファイルの各グループ（G1〜G7）を1つのGitHub Issueとして作成し、行（ID）をIssue本文のチェックリストにする
 - Issueのラベルで状態を表現: `status:not-started` / `status:in-progress` / `status:dev-done` / `status:accepted`
 - **状態変更のたびに、このファイルとGitHub Issue側の両方を更新する**（本ファイルが正本、Issueは視認性のためのミラー）

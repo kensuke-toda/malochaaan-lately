@@ -4,6 +4,9 @@
 
 - 初期の企画メモ: [`requirements.md`](./requirements.md)
 - 実装内容も反映した正式な要件定義書: [`docs/要件定義書.md`](./docs/要件定義書.md)
+- WBS（作業分解構成、進捗管理の正本）: [`docs/WBS.md`](./docs/WBS.md)
+- GitHub Issues: https://github.com/kensuke-toda/malochaaan-lately/issues
+- GitHub Project board: https://github.com/users/kensuke-toda/projects/1
 
 ## 技術スタック
 
