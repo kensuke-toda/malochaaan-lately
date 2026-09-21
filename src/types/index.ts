@@ -1,3 +1,8 @@
+export type Profile = {
+  id: string;
+  display_name: string;
+};
+
 export type Thing = {
   id: string;
   name: string;
@@ -7,21 +12,76 @@ export type Thing = {
   processed_image_url: string | null;
   memo: string | null;
   sort_order: number;
+  created_by: string;
   created_at: string;
+  profiles?: Profile | null;
 };
 
-export type DiaryPhoto = {
+export type Place = {
   id: string;
-  diary_entry_id: string;
+  name: string;
+  visited_date: string;
+  image_url: string | null;
+  memo: string | null;
+  created_by: string;
+  created_at: string;
+  profiles?: Profile | null;
+};
+
+export type Book = {
+  id: string;
+  title: string;
+  author: string | null;
+  status: "reading" | "finished";
+  image_url: string | null;
+  memo: string | null;
+  created_by: string;
+  created_at: string;
+  profiles?: Profile | null;
+};
+
+export type Sound = {
+  id: string;
+  title: string;
+  artist: string | null;
+  image_url: string | null;
+  url: string | null;
+  memo: string | null;
+  created_by: string;
+  created_at: string;
+  profiles?: Profile | null;
+};
+
+export type PostPhoto = {
+  id: string;
+  post_id: string;
   image_url: string;
   sort_order: number;
 };
 
-export type DiaryEntry = {
+export type Post = {
   id: string;
   title: string;
   body: string | null;
   entry_date: string;
+  created_by: string;
   created_at: string;
-  diary_photos?: DiaryPhoto[];
+  post_photos?: PostPhoto[];
+  profiles?: Profile | null;
+};
+
+export type Work = {
+  id: string;
+  title: string;
+  period_label: string | null;
+  summary: string | null;
+  created_by: string;
+  created_at: string;
+  profiles?: Profile | null;
+};
+
+export type SessionUser = {
+  id: string;
+  email: string | null;
+  displayName: string;
 };

@@ -1,221 +1,141 @@
-import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { createClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
-import type { DiaryEntry, Thing } from "@/types";
+import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import {
-  createDiaryEntryAction,
-  createThingAction,
-  deleteDiaryEntryAction,
+  deleteBookAction,
+  deletePlaceAction,
+  deletePostAction,
+  deleteSoundAction,
   deleteThingAction,
-  loginAction,
-  logoutAction,
-} from "./actions";
+  deleteWorkAction,
+} from "@/app/actions";
+import { logoutAction } from "@/app/login/actions";
+import { getSessionUser } from "@/lib/auth";
+import { fetchHomeData } from "@/lib/data";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { redirect } from "next/navigation";
 
-export default async function AdminPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const authenticated = await isAdminAuthenticated();
-  const { error } = await searchParams;
-
-  if (!authenticated) {
-    return (
-      <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
-        <h1 className="mb-6 text-xl font-semibold">管理画面ログイン</h1>
-        <form action={loginAction} className="flex flex-col gap-3">
-          <input
-            type="password"
-            name="password"
-            placeholder="パスワード"
-            required
-            className="rounded border border-zinc-300 px-3 py-2"
-          />
-          <button
-            type="submit"
-            className="rounded bg-zinc-900 px-3 py-2 text-white hover:bg-zinc-700"
-          >
-            ログイン
-          </button>
-          {error && (
-            <p className="text-sm text-red-600">パスワードが違います</p>
-          )}
-        </form>
-      </div>
-    );
-  }
+export default async function AdminPage() {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
 
   const configured = isSupabaseConfigured();
-  let things: Thing[] | null = null;
-  let diaryEntries: DiaryEntry[] | null = null;
-
-  if (configured) {
-    const supabase = createClient();
-    const [thingsRes, diaryRes] = await Promise.all([
-      supabase
-        .from("things")
-        .select("*")
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("diary_entries")
-        .select("*")
-        .order("entry_date", { ascending: false }),
-    ]);
-    things = thingsRes.data;
-    diaryEntries = diaryRes.data;
-  }
+  const data = await fetchHomeData();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">管理画面</h1>
-        <form action={logoutAction}>
-          <button type="submit" className="text-sm text-zinc-500 underline">
-            ログアウト
-          </button>
-        </form>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-semibold">管理画面</h1>
+          <p className="mt-1 text-xs text-[#6B6258]">{user.displayName} としてログイン中</p>
+        </div>
+        <div className="flex gap-3 text-sm">
+          <Link href="/" className="underline">
+            TOPへ
+          </Link>
+          <form action={logoutAction}>
+            <button type="submit" className="underline">
+              ログアウト
+            </button>
+          </form>
+        </div>
       </div>
 
+      <p className="mb-8 rounded-xl bg-[#F4EEE4] px-4 py-3 text-xs text-[#6B6258]">
+        新規追加はTOPページの「＋追加」から行います。ここでは一覧の確認と、自分の投稿の削除のみできます。
+      </p>
+
       {!configured && (
-        <div className="mb-8 rounded border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Supabaseが未設定のため、保存はできません。<code>.env.local</code>
-          を設定してください。
-        </div>
+        <p className="mb-8 rounded-xl bg-[#F4EEE4] px-4 py-3 text-sm text-[#B85C38]">Supabase が未設定のため、データはありません。</p>
       )}
 
-      {/* Things 追加フォーム */}
-      <section className="mb-12">
-        <h2 className="mb-4 text-lg font-semibold">モノを追加</h2>
-        <form
-          action={createThingAction}
-          className="flex flex-col gap-3 rounded border border-zinc-200 p-4"
-        >
-          <input
-            type="text"
-            name="name"
-            placeholder="商品名（必須）"
-            required
-            className="rounded border border-zinc-300 px-3 py-2"
-          />
-          <input
-            type="text"
-            name="brand"
-            placeholder="ブランド名"
-            className="rounded border border-zinc-300 px-3 py-2"
-          />
-          <input
-            type="url"
-            name="product_url"
-            placeholder="商品ページURL"
-            className="rounded border border-zinc-300 px-3 py-2"
-          />
-          <textarea
-            name="memo"
-            placeholder="メモ"
-            rows={2}
-            className="rounded border border-zinc-300 px-3 py-2"
-          />
-          <input type="file" name="image" accept="image/*" />
-          <p className="text-xs text-zinc-500">
-            背景透過は未実装です（Phase
-            2で自動化予定）。透過済み画像を用意できる場合は事前に加工してからアップロードしてください。
-          </p>
-          <button
-            type="submit"
-            className="self-start rounded bg-zinc-900 px-4 py-2 text-white hover:bg-zinc-700"
-          >
-            追加する
-          </button>
-        </form>
-
-        <ul className="mt-4 divide-y divide-zinc-200">
-          {(things as Thing[] | null)?.map((thing) => (
-            <li
-              key={thing.id}
-              className="flex items-center justify-between py-2 text-sm"
-            >
-              <span>
-                {thing.brand && (
-                  <span className="text-zinc-400">{thing.brand} / </span>
-                )}
-                {thing.name}
-              </span>
-              <form action={deleteThingAction}>
-                <input type="hidden" name="id" value={thing.id} />
-                <button type="submit" className="text-red-600 underline">
-                  削除
-                </button>
-              </form>
-            </li>
-          ))}
-          {!things?.length && (
-            <li className="py-2 text-sm text-zinc-400">まだありません</li>
-          )}
-        </ul>
-      </section>
-
-      {/* 日記 追加フォーム */}
-      <section>
-        <h2 className="mb-4 text-lg font-semibold">日記を追加</h2>
-        <form
-          action={createDiaryEntryAction}
-          className="flex flex-col gap-3 rounded border border-zinc-200 p-4"
-        >
-          <input
-            type="date"
-            name="entry_date"
-            defaultValue={new Date().toISOString().slice(0, 10)}
-            className="rounded border border-zinc-300 px-3 py-2"
-          />
-          <input
-            type="text"
-            name="title"
-            placeholder="タイトル（必須）"
-            required
-            className="rounded border border-zinc-300 px-3 py-2"
-          />
-          <textarea
-            name="body"
-            placeholder="本文"
-            rows={4}
-            className="rounded border border-zinc-300 px-3 py-2"
-          />
-          <input type="file" name="photos" accept="image/*" multiple />
-          <button
-            type="submit"
-            className="self-start rounded bg-zinc-900 px-4 py-2 text-white hover:bg-zinc-700"
-          >
-            追加する
-          </button>
-        </form>
-
-        <ul className="mt-4 divide-y divide-zinc-200">
-          {(diaryEntries as DiaryEntry[] | null)?.map((entry) => (
-            <li
-              key={entry.id}
-              className="flex items-center justify-between py-2 text-sm"
-            >
-              <span>
-                <span className="text-zinc-400">
-                  {formatDate(entry.entry_date)} /{" "}
-                </span>
-                {entry.title}
-              </span>
-              <form action={deleteDiaryEntryAction}>
-                <input type="hidden" name="id" value={entry.id} />
-                <button type="submit" className="text-red-600 underline">
-                  削除
-                </button>
-              </form>
-            </li>
-          ))}
-          {!diaryEntries?.length && (
-            <li className="py-2 text-sm text-zinc-400">まだありません</li>
-          )}
-        </ul>
-      </section>
+      <AdminList
+        title="Places"
+        rows={data.places.map((p) => ({
+          id: p.id,
+          label: `${formatDate(p.visited_date)} ・ ${p.name}`,
+          mine: p.created_by === user.id,
+        }))}
+        action={deletePlaceAction}
+      />
+      <AdminList
+        title="Things"
+        rows={data.things.map((p) => ({
+          id: p.id,
+          label: `${p.brand ? `${p.brand} / ` : ""}${p.name}`,
+          mine: p.created_by === user.id,
+        }))}
+        action={deleteThingAction}
+      />
+      <AdminList
+        title="Books"
+        rows={data.books.map((p) => ({
+          id: p.id,
+          label: `${p.title}${p.status === "reading" ? "（読書中）" : ""}`,
+          mine: p.created_by === user.id,
+        }))}
+        action={deleteBookAction}
+      />
+      <AdminList
+        title="Sounds"
+        rows={data.sounds.map((p) => ({
+          id: p.id,
+          label: `${p.artist ? `${p.artist} / ` : ""}${p.title}`,
+          mine: p.created_by === user.id,
+        }))}
+        action={deleteSoundAction}
+      />
+      <AdminList
+        title="Posts"
+        rows={data.posts.map((p) => ({
+          id: p.id,
+          label: `${formatDate(p.entry_date)} ・ ${p.title}`,
+          mine: p.created_by === user.id,
+        }))}
+        action={deletePostAction}
+      />
+      <AdminList
+        title="Works"
+        rows={data.works.map((p) => ({
+          id: p.id,
+          label: p.title,
+          mine: p.created_by === user.id,
+        }))}
+        action={deleteWorkAction}
+      />
     </div>
+  );
+}
+
+function AdminList({
+  title,
+  rows,
+  action,
+}: {
+  title: string;
+  rows: { id: string; label: string; mine: boolean }[];
+  action: (formData: FormData) => Promise<void>;
+}) {
+  return (
+    <section className="mb-8">
+      <h2 className="mb-3 font-display text-lg font-semibold">{title}</h2>
+      <ul className="divide-y divide-[#2F2A24]/10 rounded-xl bg-[#F4EEE4]">
+        {rows.map((row) => (
+          <li key={row.id} className="flex items-center justify-between px-4 py-3 text-sm">
+            <span>{row.label}</span>
+            {row.mine ? (
+              <form action={action}>
+                <input type="hidden" name="id" value={row.id} />
+                <button type="submit" className="text-[#B85C38] underline">
+                  削除
+                </button>
+              </form>
+            ) : (
+              <span className="text-xs text-[#6B6258]">パートナーの投稿（編集不可）</span>
+            )}
+          </li>
+        ))}
+        {!rows.length && <li className="px-4 py-3 text-sm text-[#6B6258]">まだありません</li>}
+      </ul>
+    </section>
   );
 }
