@@ -4,32 +4,50 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Lately（モック）— モノの詳細</title>
+<script>
+  tailwind = { config: {
+    theme: {
+      extend: {
+        colors: {
+          cream: '#F7EFE1', sand: '#EFE1C4', paper: '#FBF6EC',
+          walnut: '#4A3527', clay: '#C1502E', mustard: '#D9A441', teal: '#4F7C73',
+        },
+        fontFamily: {
+          display: ['Fraunces', 'serif'],
+          body: ['"Nunito Sans"', 'sans-serif'],
+        },
+      },
+    },
+  } };
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-white text-zinc-900">
+<body class="bg-cream font-body text-walnut">
 
   <div class="mx-auto max-w-xl px-4 py-16">
-    <a href="top.html" class="text-sm text-zinc-400">← 戻る</a>
+    <a href="top.html" class="text-sm text-walnut/40 hover:text-walnut/70">← 戻る</a>
 
-    <div class="mt-6 aspect-square overflow-hidden rounded bg-zinc-100">
-      <img src="https://placehold.co/800x800/f4f4f5/a1a1aa?text=Photo" alt="" class="h-full w-full object-cover" />
+    <div class="mt-6 aspect-square overflow-hidden rounded-2xl bg-sand shadow-sm">
+      <img src="https://placehold.co/800x800/EFE1C4/8a6d4a?text=Photo" alt="" class="h-full w-full object-cover" />
     </div>
 
     <div class="mt-6">
       <div class="mb-2 flex items-center gap-2">
-        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-800 text-[10px] text-white">K</span>
-        <p class="text-xs text-zinc-400">Kenが投稿</p>
+        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-clay text-[10px] font-semibold text-paper">K</span>
+        <p class="text-xs text-walnut/50">Kenが投稿</p>
       </div>
 
-      <p class="text-sm text-zinc-400">BAO BAO ISSEY MIYAKE</p>
-      <h1 class="text-xl font-semibold">CASSETTE</h1>
+      <p class="text-sm text-walnut/40">BAO BAO ISSEY MIYAKE</p>
+      <h1 class="font-display text-2xl font-semibold">CASSETTE</h1>
 
-      <p class="mt-3 whitespace-pre-wrap text-sm text-zinc-600">形が面白くて一目惚れ。見た目以上に軽くて、荷物が少ない日はこれだけで出かけている。</p>
+      <p class="mt-3 whitespace-pre-wrap text-sm text-walnut/70">形が面白くて一目惚れ。見た目以上に軽くて、荷物が少ない日はこれだけで出かけている。</p>
 
-      <a href="#" class="mt-4 inline-block text-sm underline">商品ページ →</a>
+      <a href="#" class="mt-4 inline-flex items-center gap-1 rounded-full bg-sand px-4 py-2 text-sm font-medium text-walnut/80 hover:bg-mustard/30">商品ページ →</a>
     </div>
 
-    <footer class="mt-24 border-t border-zinc-100 pt-6 text-xs text-zinc-300">
+    <footer class="mt-24 border-t border-walnut/10 pt-6 text-xs text-walnut/30">
       Mockup（G1-2）— docs/WBS.md 参照
     </footer>
   </div>

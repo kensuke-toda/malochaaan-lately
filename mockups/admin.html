@@ -4,92 +4,120 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Lately（モック）— 管理画面</title>
+<script>
+  tailwind = { config: {
+    theme: {
+      extend: {
+        colors: {
+          cream: '#F7EFE1', sand: '#EFE1C4', paper: '#FBF6EC',
+          walnut: '#4A3527', clay: '#C1502E', mustard: '#D9A441', teal: '#4F7C73',
+        },
+        fontFamily: {
+          display: ['Fraunces', 'serif'],
+          body: ['"Nunito Sans"', 'sans-serif'],
+        },
+      },
+    },
+  } };
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-white text-zinc-900">
+<body class="bg-cream font-body text-walnut">
 
   <div class="mx-auto max-w-3xl px-4 py-10">
-    <div class="mb-8 flex items-center justify-between">
+    <div class="mb-6 flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-semibold">管理画面</h1>
+        <h1 class="font-display text-2xl font-semibold">管理画面</h1>
         <div class="mt-1 flex items-center gap-2">
-          <span class="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-800 text-[10px] text-white">K</span>
-          <p class="text-xs text-zinc-500">Ken としてログイン中</p>
+          <span class="flex h-5 w-5 items-center justify-center rounded-full bg-clay text-[10px] font-semibold text-paper">K</span>
+          <p class="text-xs text-walnut/50">Ken としてログイン中</p>
         </div>
       </div>
-      <a href="login.html" class="text-sm text-zinc-500 underline">ログアウト</a>
+      <div class="flex items-center gap-3">
+        <a href="top.html" class="text-sm text-walnut/50 underline">TOPへ戻る</a>
+        <a href="login.html" class="text-sm text-walnut/50 underline">ログアウト</a>
+      </div>
     </div>
 
-    <div class="mb-8 rounded border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-700">
-      自分の投稿は「編集・削除」できますが、パートナーの投稿は閲覧のみです（G7-2決定済み）。
+    <div class="mb-8 rounded-xl border border-mustard/40 bg-mustard/10 px-4 py-3 text-xs text-walnut/70">
+      🆕 新規追加はTOPページの「＋追加」ボタンから行います。ここでは一覧の確認・編集・削除のみ行えます。自分の投稿のみ編集・削除できます（G7-2決定済み）。
     </div>
 
-    <!-- Things 追加フォーム -->
-    <section class="mb-12">
-      <h2 class="mb-4 text-lg font-semibold">モノを追加</h2>
-      <form class="flex flex-col gap-3 rounded border border-zinc-200 p-4">
-        <input type="text" placeholder="商品名（必須）" class="rounded border border-zinc-300 px-3 py-2 text-sm" />
-        <input type="text" placeholder="ブランド名" class="rounded border border-zinc-300 px-3 py-2 text-sm" />
-        <input type="url" placeholder="商品ページURL" class="rounded border border-zinc-300 px-3 py-2 text-sm" />
-        <textarea placeholder="メモ" rows="2" class="rounded border border-zinc-300 px-3 py-2 text-sm"></textarea>
-        <input type="file" />
-        <button type="button" class="self-start rounded bg-zinc-900 px-4 py-2 text-sm text-white hover:bg-zinc-700">追加する</button>
-      </form>
-
-      <ul class="mt-4 divide-y divide-zinc-200">
-        <li class="flex items-center justify-between py-2 text-sm">
+    <!-- Places 一覧 -->
+    <section class="mb-10">
+      <h2 class="mb-3 font-display text-lg font-semibold">Places（お店）</h2>
+      <ul class="divide-y divide-walnut/10 rounded-2xl border border-walnut/10 bg-paper">
+        <li class="flex items-center justify-between px-4 py-3 text-sm">
           <span class="flex items-center gap-2">
-            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-800 text-[10px] text-white">K</span>
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-clay text-[10px] font-semibold text-paper">K</span>
+            2026/09/20 ・ Fuglen 浅草
+          </span>
+          <span class="flex gap-3">
+            <a href="#" class="text-walnut/50 underline">編集</a>
+            <a href="#" class="text-clay underline">削除</a>
+          </span>
+        </li>
+        <li class="flex items-center justify-between px-4 py-3 text-sm">
+          <span class="flex items-center gap-2">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-teal text-[10px] font-semibold text-paper">P</span>
+            2026/09/15 ・ ひつじや 四谷店
+          </span>
+          <span class="text-xs text-walnut/30">パートナーの投稿（編集不可）</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Things 一覧 -->
+    <section class="mb-10">
+      <h2 class="mb-3 font-display text-lg font-semibold">Things（モノ）</h2>
+      <ul class="divide-y divide-walnut/10 rounded-2xl border border-walnut/10 bg-paper">
+        <li class="flex items-center justify-between px-4 py-3 text-sm">
+          <span class="flex items-center gap-2">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-clay text-[10px] font-semibold text-paper">K</span>
             BAO BAO ISSEY MIYAKE / CASSETTE
           </span>
           <span class="flex gap-3">
-            <a href="#" class="text-zinc-500 underline">編集</a>
-            <a href="#" class="text-red-600 underline">削除</a>
+            <a href="#" class="text-walnut/50 underline">編集</a>
+            <a href="#" class="text-clay underline">削除</a>
           </span>
         </li>
-        <li class="flex items-center justify-between py-2 text-sm">
+        <li class="flex items-center justify-between px-4 py-3 text-sm">
           <span class="flex items-center gap-2">
-            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-rose-400 text-[10px] text-white">P</span>
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-teal text-[10px] font-semibold text-paper">P</span>
             Apple / AirPods 4
           </span>
-          <span class="text-xs text-zinc-300">パートナーの投稿（編集不可）</span>
+          <span class="text-xs text-walnut/30">パートナーの投稿（編集不可）</span>
         </li>
       </ul>
     </section>
 
-    <!-- 日記 追加フォーム -->
+    <!-- 日記 一覧 -->
     <section>
-      <h2 class="mb-4 text-lg font-semibold">日記を追加</h2>
-      <form class="flex flex-col gap-3 rounded border border-zinc-200 p-4">
-        <input type="date" value="2026-09-21" class="rounded border border-zinc-300 px-3 py-2 text-sm" />
-        <input type="text" placeholder="タイトル（必須）" class="rounded border border-zinc-300 px-3 py-2 text-sm" />
-        <textarea placeholder="本文" rows="4" class="rounded border border-zinc-300 px-3 py-2 text-sm"></textarea>
-        <input type="file" multiple />
-        <button type="button" class="self-start rounded bg-zinc-900 px-4 py-2 text-sm text-white hover:bg-zinc-700">追加する</button>
-      </form>
-
-      <ul class="mt-4 divide-y divide-zinc-200">
-        <li class="flex items-center justify-between py-2 text-sm">
+      <h2 class="mb-3 font-display text-lg font-semibold">Diary（日記）</h2>
+      <ul class="divide-y divide-walnut/10 rounded-2xl border border-walnut/10 bg-paper">
+        <li class="flex items-center justify-between px-4 py-3 text-sm">
           <span class="flex items-center gap-2">
-            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-800 text-[10px] text-white">K</span>
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-clay text-[10px] font-semibold text-paper">K</span>
             2026/09/21 ・ 週末はチームの歓迎会でひつじやへ
           </span>
           <span class="flex gap-3">
-            <a href="#" class="text-zinc-500 underline">編集</a>
-            <a href="#" class="text-red-600 underline">削除</a>
+            <a href="#" class="text-walnut/50 underline">編集</a>
+            <a href="#" class="text-clay underline">削除</a>
           </span>
         </li>
-        <li class="flex items-center justify-between py-2 text-sm">
+        <li class="flex items-center justify-between px-4 py-3 text-sm">
           <span class="flex items-center gap-2">
-            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-rose-400 text-[10px] text-white">P</span>
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-teal text-[10px] font-semibold text-paper">P</span>
             2026/09/19 ・ 新しいカフェでゆっくり読書
           </span>
-          <span class="text-xs text-zinc-300">パートナーの投稿（編集不可）</span>
+          <span class="text-xs text-walnut/30">パートナーの投稿（編集不可）</span>
         </li>
       </ul>
     </section>
 
-    <footer class="mt-16 border-t border-zinc-100 pt-6 text-xs text-zinc-300">
+    <footer class="mt-16 border-t border-walnut/10 pt-6 text-xs text-walnut/30">
       Mockup（G1-5）— docs/WBS.md 参照
     </footer>
   </div>

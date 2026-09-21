@@ -4,88 +4,251 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Lately（モック）— トップページ</title>
+<script>
+  tailwind = { config: {
+    theme: {
+      extend: {
+        colors: {
+          cream: '#F7EFE1',
+          sand: '#EFE1C4',
+          paper: '#FBF6EC',
+          walnut: '#4A3527',
+          clay: '#C1502E',
+          mustard: '#D9A441',
+          teal: '#4F7C73',
+        },
+        fontFamily: {
+          display: ['Fraunces', 'serif'],
+          body: ['"Nunito Sans"', 'sans-serif'],
+        },
+        boxShadow: {
+          warm: '0 8px 24px -8px rgba(74, 53, 39, 0.25)',
+        },
+      },
+    },
+  } };
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .dot { width: 6px; height: 6px; border-radius: 999px; display: inline-block; }
+  body.logged-out .auth-only { display: none !important; }
+  .day-cell.is-selected { background-color: #C1502E; color: #FBF6EC; }
+  .day-cell.is-selected .dot { background-color: #FBF6EC !important; }
+</style>
 </head>
-<body class="bg-white text-zinc-900">
+<body class="bg-cream font-body text-walnut">
 
-  <div class="mx-auto max-w-3xl px-4 py-16">
+  <div class="mx-auto max-w-4xl px-4 py-12 sm:py-16">
+
     <!-- ヘッダー -->
-    <header class="mb-16 flex items-start justify-between">
+    <header class="mb-10 flex flex-wrap items-start justify-between gap-4 border-b border-walnut/10 pb-6">
       <div>
-        <h1 class="text-2xl font-semibold">Lately</h1>
-        <p class="mt-2 text-sm text-zinc-500">最近買ってよかったモノと、日々の日記。</p>
+        <h1 class="font-display text-3xl font-semibold text-clay">Lately</h1>
+        <p class="mt-2 text-sm text-walnut/60">最近買ってよかったモノ、行ったお店、日々の日記。</p>
       </div>
-      <a href="admin.html" class="text-xs text-zinc-400 underline">管理画面へ</a>
+      <div class="flex items-center gap-3 text-sm">
+        <span class="auth-only flex items-center gap-2 rounded-full bg-sand px-3 py-1.5 text-walnut/80">
+          <span class="flex h-5 w-5 items-center justify-center rounded-full bg-clay text-[10px] font-semibold text-paper">K</span>
+          Ken としてログイン中
+        </span>
+        <button type="button" onclick="document.body.classList.toggle('logged-out')" class="rounded-full border border-walnut/20 px-3 py-1.5 text-xs text-walnut/60 hover:bg-sand">
+          ログイン状態を切替（モック用）
+        </button>
+        <a href="admin.html" class="text-xs text-walnut/40 underline">管理画面（一覧・編集）</a>
+      </div>
     </header>
 
+    <!-- カレンダー -->
+    <section class="mb-14 rounded-2xl border border-walnut/10 bg-paper p-5 shadow-warm sm:p-6">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="font-display text-lg font-semibold">カレンダー</h2>
+        <div class="flex items-center gap-3 text-sm text-walnut/50">
+          <button type="button" class="rounded-full px-2 py-1 hover:bg-sand">←</button>
+          <span class="font-medium text-walnut/80">2026年9月</span>
+          <button type="button" class="rounded-full px-2 py-1 hover:bg-sand">→</button>
+        </div>
+      </div>
+
+      <div class="mb-2 grid grid-cols-7 gap-1 text-center text-[11px] text-walnut/40">
+        <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+      </div>
+
+      <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-center text-sm">
+        <!-- 8/30, 8/31 -->
+        <span class="day-cell rounded-lg py-2 text-walnut/25">30</span>
+        <span class="day-cell rounded-lg py-2 text-walnut/25">31</span>
+        <button onclick="selectDay(1)" class="day-cell rounded-lg py-2 hover:bg-sand">1</button>
+        <button onclick="selectDay(2)" class="day-cell rounded-lg py-2 hover:bg-sand">2</button>
+        <button onclick="selectDay(3)" class="day-cell rounded-lg py-2 hover:bg-sand">3</button>
+        <button onclick="selectDay(4)" class="day-cell rounded-lg py-2 hover:bg-sand">4</button>
+        <button onclick="selectDay(5)" class="day-cell rounded-lg py-2 hover:bg-sand">5</button>
+
+        <button onclick="selectDay(6)" class="day-cell rounded-lg py-2 hover:bg-sand">6</button>
+        <button onclick="selectDay(7)" class="day-cell rounded-lg py-2 hover:bg-sand">7</button>
+        <button onclick="selectDay(8)" class="day-cell rounded-lg py-2 hover:bg-sand">8</button>
+        <button onclick="selectDay(9)" class="day-cell rounded-lg py-2 hover:bg-sand">9</button>
+        <button onclick="selectDay(10)" class="day-cell rounded-lg py-2 hover:bg-sand">10</button>
+        <button onclick="selectDay(11)" class="day-cell rounded-lg py-2 hover:bg-sand">11</button>
+        <button onclick="selectDay(12)" class="day-cell rounded-lg py-2 hover:bg-sand">12</button>
+
+        <button onclick="selectDay(13)" class="day-cell rounded-lg py-2 hover:bg-sand">13</button>
+        <button onclick="selectDay(14)" class="day-cell rounded-lg py-2 hover:bg-sand">14</button>
+        <button onclick="selectDay(15)" class="day-cell rounded-lg py-2 hover:bg-sand">15</button>
+        <button onclick="selectDay(16)" class="day-cell rounded-lg py-2 hover:bg-sand">16</button>
+        <button onclick="selectDay(17)" class="day-cell flex flex-col items-center gap-0.5 rounded-lg py-1.5 hover:bg-sand">
+          <span>17</span><span class="dot bg-teal"></span>
+        </button>
+        <button onclick="selectDay(18)" class="day-cell flex flex-col items-center gap-0.5 rounded-lg py-1.5 hover:bg-sand">
+          <span>18</span><span class="dot bg-mustard"></span>
+        </button>
+        <button onclick="selectDay(19)" class="day-cell flex flex-col items-center gap-0.5 rounded-lg py-1.5 hover:bg-sand">
+          <span>19</span><span class="dot bg-teal"></span>
+        </button>
+
+        <button onclick="selectDay(20)" class="day-cell flex flex-col items-center gap-0.5 rounded-lg py-1.5 hover:bg-sand">
+          <span>20</span><span class="dot bg-clay"></span>
+        </button>
+        <button onclick="selectDay(21)" class="day-cell is-selected flex flex-col items-center gap-0.5 rounded-lg py-1.5 font-semibold ring-2 ring-clay/60">
+          <span>21</span>
+          <span class="flex gap-0.5"><span class="dot bg-teal"></span><span class="dot bg-mustard"></span></span>
+        </button>
+        <button onclick="selectDay(22)" class="day-cell rounded-lg py-2 hover:bg-sand">22</button>
+        <button onclick="selectDay(23)" class="day-cell rounded-lg py-2 hover:bg-sand">23</button>
+        <button onclick="selectDay(24)" class="day-cell rounded-lg py-2 hover:bg-sand">24</button>
+        <button onclick="selectDay(25)" class="day-cell rounded-lg py-2 hover:bg-sand">25</button>
+        <button onclick="selectDay(26)" class="day-cell rounded-lg py-2 hover:bg-sand">26</button>
+
+        <button onclick="selectDay(27)" class="day-cell rounded-lg py-2 hover:bg-sand">27</button>
+        <button onclick="selectDay(28)" class="day-cell rounded-lg py-2 hover:bg-sand">28</button>
+        <button onclick="selectDay(29)" class="day-cell rounded-lg py-2 hover:bg-sand">29</button>
+        <button onclick="selectDay(30)" class="day-cell rounded-lg py-2 hover:bg-sand">30</button>
+        <span class="day-cell rounded-lg py-2 text-walnut/25">1</span>
+        <span class="day-cell rounded-lg py-2 text-walnut/25">2</span>
+        <span class="day-cell rounded-lg py-2 text-walnut/25">3</span>
+      </div>
+
+      <div class="mt-3 flex items-center gap-4 text-[11px] text-walnut/40">
+        <span class="flex items-center gap-1"><span class="dot bg-mustard"></span>Things</span>
+        <span class="flex items-center gap-1"><span class="dot bg-teal"></span>Diary</span>
+        <span class="flex items-center gap-1"><span class="dot bg-clay"></span>Places</span>
+      </div>
+
+      <!-- 選択した日の内訳パネル -->
+      <div id="day-panel" class="mt-4 rounded-xl bg-sand/60 p-4 text-sm">
+        <!-- selectDay(21) の内容を初期表示 -->
+      </div>
+    </section>
+
+    <!-- Places -->
+    <section class="mb-14">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="font-display text-lg font-semibold">Places <span class="text-sm font-normal text-walnut/40">行ったお店</span></h2>
+        <button type="button" onclick="openModal('place')" class="auth-only flex items-center gap-1.5 rounded-full bg-clay px-3 py-1.5 text-xs font-semibold text-paper shadow-sm hover:bg-clay/90">
+          <span class="text-base leading-none">＋</span>追加
+        </button>
+      </div>
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+
+        <a href="place-detail.html" class="group flex flex-col gap-2">
+          <div class="relative aspect-[4/3] overflow-hidden rounded-2xl bg-sand shadow-sm">
+            <img src="https://placehold.co/400x300/EFE1C4/8a6d4a?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-paper/90 px-2 py-0.5 text-[10px] text-walnut/70 shadow-sm">Ken</span>
+          </div>
+          <div class="text-xs">
+            <p class="font-medium">Fuglen 浅草</p>
+            <p class="text-walnut/40">2026年9月20日</p>
+          </div>
+        </a>
+
+        <a href="place-detail.html" class="group flex flex-col gap-2">
+          <div class="relative aspect-[4/3] overflow-hidden rounded-2xl bg-sand shadow-sm">
+            <img src="https://placehold.co/400x300/EFE1C4/8a6d4a?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-paper/90 px-2 py-0.5 text-[10px] text-walnut/70 shadow-sm">パートナー</span>
+          </div>
+          <div class="text-xs">
+            <p class="font-medium">ひつじや 四谷店</p>
+            <p class="text-walnut/40">2026年9月15日</p>
+          </div>
+        </a>
+
+      </div>
+    </section>
+
     <!-- Things -->
-    <section class="mb-16">
-      <h2 class="mb-4 text-lg font-semibold">Things</h2>
+    <section class="mb-14">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="font-display text-lg font-semibold">Things <span class="text-sm font-normal text-walnut/40">買ってよかったモノ</span></h2>
+        <button type="button" onclick="openModal('thing')" class="auth-only flex items-center gap-1.5 rounded-full bg-clay px-3 py-1.5 text-xs font-semibold text-paper shadow-sm hover:bg-clay/90">
+          <span class="text-base leading-none">＋</span>追加
+        </button>
+      </div>
       <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
 
         <a href="thing-detail.html" class="group flex flex-col gap-2">
-          <div class="relative aspect-square overflow-hidden rounded bg-zinc-100">
-            <img src="https://placehold.co/400x400/f4f4f5/a1a1aa?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
-            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] text-zinc-600 shadow-sm">Ken</span>
+          <div class="relative aspect-square overflow-hidden rounded-2xl bg-sand shadow-sm">
+            <img src="https://placehold.co/400x400/EFE1C4/8a6d4a?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-paper/90 px-2 py-0.5 text-[10px] text-walnut/70 shadow-sm">Ken</span>
           </div>
           <div class="text-xs">
-            <p class="text-zinc-400">BAO BAO ISSEY MIYAKE</p>
-            <p class="line-clamp-2">CASSETTE</p>
+            <p class="text-walnut/40">BAO BAO ISSEY MIYAKE</p>
+            <p class="line-clamp-2 font-medium">CASSETTE</p>
           </div>
         </a>
 
         <a href="thing-detail.html" class="group flex flex-col gap-2">
-          <div class="relative aspect-square overflow-hidden rounded bg-zinc-100">
-            <img src="https://placehold.co/400x400/f4f4f5/a1a1aa?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
-            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] text-zinc-600 shadow-sm">パートナー</span>
+          <div class="relative aspect-square overflow-hidden rounded-2xl bg-sand shadow-sm">
+            <img src="https://placehold.co/400x400/EFE1C4/8a6d4a?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-paper/90 px-2 py-0.5 text-[10px] text-walnut/70 shadow-sm">パートナー</span>
           </div>
           <div class="text-xs">
-            <p class="text-zinc-400">Apple</p>
-            <p class="line-clamp-2">AirPods 4</p>
+            <p class="text-walnut/40">Apple</p>
+            <p class="line-clamp-2 font-medium">AirPods 4</p>
           </div>
         </a>
 
         <a href="thing-detail.html" class="group flex flex-col gap-2">
-          <div class="relative aspect-square overflow-hidden rounded bg-zinc-100">
-            <img src="https://placehold.co/400x400/f4f4f5/a1a1aa?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
-            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] text-zinc-600 shadow-sm">Ken</span>
+          <div class="relative aspect-square overflow-hidden rounded-2xl bg-sand shadow-sm">
+            <img src="https://placehold.co/400x400/EFE1C4/8a6d4a?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-paper/90 px-2 py-0.5 text-[10px] text-walnut/70 shadow-sm">Ken</span>
           </div>
           <div class="text-xs">
-            <p class="text-zinc-400">SIGMA</p>
-            <p class="line-clamp-2">Sigma BF</p>
+            <p class="text-walnut/40">SIGMA</p>
+            <p class="line-clamp-2 font-medium">Sigma BF</p>
           </div>
         </a>
 
         <a href="thing-detail.html" class="group flex flex-col gap-2">
-          <div class="relative aspect-square overflow-hidden rounded bg-zinc-100">
-            <img src="https://placehold.co/400x400/f4f4f5/a1a1aa?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
-            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] text-zinc-600 shadow-sm">パートナー</span>
+          <div class="relative aspect-square overflow-hidden rounded-2xl bg-sand shadow-sm">
+            <img src="https://placehold.co/400x400/EFE1C4/8a6d4a?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-paper/90 px-2 py-0.5 text-[10px] text-walnut/70 shadow-sm">パートナー</span>
           </div>
           <div class="text-xs">
-            <p class="text-zinc-400">FEILER</p>
-            <p class="line-clamp-2">トムとジェリー×FEILER ハンカチ</p>
+            <p class="text-walnut/40">FEILER</p>
+            <p class="line-clamp-2 font-medium">トムとジェリー×FEILER ハンカチ</p>
           </div>
         </a>
 
         <a href="thing-detail.html" class="group flex flex-col gap-2">
-          <div class="relative aspect-square overflow-hidden rounded bg-zinc-100">
-            <img src="https://placehold.co/400x400/f4f4f5/a1a1aa?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
-            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] text-zinc-600 shadow-sm">Ken</span>
+          <div class="relative aspect-square overflow-hidden rounded-2xl bg-sand shadow-sm">
+            <img src="https://placehold.co/400x400/EFE1C4/8a6d4a?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-paper/90 px-2 py-0.5 text-[10px] text-walnut/70 shadow-sm">Ken</span>
           </div>
           <div class="text-xs">
-            <p class="text-zinc-400">objcts.io</p>
-            <p class="line-clamp-2">ソフトバックパック スモール</p>
+            <p class="text-walnut/40">objcts.io</p>
+            <p class="line-clamp-2 font-medium">ソフトバックパック スモール</p>
           </div>
         </a>
 
         <a href="thing-detail.html" class="group flex flex-col gap-2">
-          <div class="relative aspect-square overflow-hidden rounded bg-zinc-100">
-            <img src="https://placehold.co/400x400/f4f4f5/a1a1aa?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
-            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] text-zinc-600 shadow-sm">パートナー</span>
+          <div class="relative aspect-square overflow-hidden rounded-2xl bg-sand shadow-sm">
+            <img src="https://placehold.co/400x400/EFE1C4/8a6d4a?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-paper/90 px-2 py-0.5 text-[10px] text-walnut/70 shadow-sm">パートナー</span>
           </div>
           <div class="text-xs">
-            <p class="text-zinc-400">Amazon</p>
-            <p class="line-clamp-2">Kindle Scribe</p>
+            <p class="text-walnut/40">Amazon</p>
+            <p class="line-clamp-2 font-medium">Kindle Scribe</p>
           </div>
         </a>
 
@@ -94,49 +257,158 @@
 
     <!-- Diary -->
     <section>
-      <h2 class="mb-4 text-lg font-semibold">Diary</h2>
-      <ul class="flex flex-col gap-6">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="font-display text-lg font-semibold">Diary <span class="text-sm font-normal text-walnut/40">日々の日記</span></h2>
+        <button type="button" onclick="openModal('diary')" class="auth-only flex items-center gap-1.5 rounded-full bg-clay px-3 py-1.5 text-xs font-semibold text-paper shadow-sm hover:bg-clay/90">
+          <span class="text-base leading-none">＋</span>追加
+        </button>
+      </div>
+      <ul class="flex flex-col gap-5">
 
-        <li>
+        <li class="rounded-2xl border border-walnut/10 bg-paper p-4 shadow-sm sm:p-5">
           <a href="diary-detail.html" class="block">
-            <div class="mb-1 flex items-center gap-2">
-              <span class="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-800 text-[10px] text-white">K</span>
-              <p class="text-xs text-zinc-400">Ken ・ 2026年9月21日</p>
+            <div class="mb-1.5 flex items-center gap-2">
+              <span class="flex h-5 w-5 items-center justify-center rounded-full bg-clay text-[10px] font-semibold text-paper">K</span>
+              <p class="text-xs text-walnut/50">Ken ・ 2026年9月21日</p>
             </div>
-            <p class="font-medium">週末はチームの歓迎会でひつじやへ</p>
-            <p class="mt-1 line-clamp-2 text-sm text-zinc-600">四谷店で歓迎会。羊肉が思ったより食べやすくて美味しかった。次はランチにも行ってみたい。</p>
+            <p class="font-display font-semibold">週末はチームの歓迎会でひつじやへ</p>
+            <p class="mt-1 line-clamp-2 text-sm text-walnut/60">四谷店で歓迎会。羊肉が思ったより食べやすくて美味しかった。次はランチにも行ってみたい。</p>
           </a>
         </li>
 
-        <li>
+        <li class="rounded-2xl border border-walnut/10 bg-paper p-4 shadow-sm sm:p-5">
           <a href="diary-detail.html" class="block">
-            <div class="mb-1 flex items-center gap-2">
-              <span class="flex h-5 w-5 items-center justify-center rounded-full bg-rose-400 text-[10px] text-white">P</span>
-              <p class="text-xs text-zinc-400">パートナー ・ 2026年9月19日</p>
+            <div class="mb-1.5 flex items-center gap-2">
+              <span class="flex h-5 w-5 items-center justify-center rounded-full bg-teal text-[10px] font-semibold text-paper">P</span>
+              <p class="text-xs text-walnut/50">パートナー ・ 2026年9月19日</p>
             </div>
-            <p class="font-medium">新しいカフェでゆっくり読書</p>
-            <p class="mt-1 line-clamp-2 text-sm text-zinc-600">近所に新しくできたカフェへ。窓際の席が気持ちよくて、気づいたら2時間くらい本を読んでいた。</p>
+            <p class="font-display font-semibold">新しいカフェでゆっくり読書</p>
+            <p class="mt-1 line-clamp-2 text-sm text-walnut/60">近所に新しくできたカフェへ。窓際の席が気持ちよくて、気づいたら2時間くらい本を読んでいた。</p>
           </a>
         </li>
 
-        <li>
+        <li class="rounded-2xl border border-walnut/10 bg-paper p-4 shadow-sm sm:p-5">
           <a href="diary-detail.html" class="block">
-            <div class="mb-1 flex items-center gap-2">
-              <span class="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-800 text-[10px] text-white">K</span>
-              <p class="text-xs text-zinc-400">Ken ・ 2026年9月17日</p>
+            <div class="mb-1.5 flex items-center gap-2">
+              <span class="flex h-5 w-5 items-center justify-center rounded-full bg-clay text-[10px] font-semibold text-paper">K</span>
+              <p class="text-xs text-walnut/50">Ken ・ 2026年9月17日</p>
             </div>
-            <p class="font-medium">「読んでよかった本」を1冊追加</p>
-            <p class="mt-1 line-clamp-2 text-sm text-zinc-600">売野機子さんの『ありす、宇宙までも 5』を読了。続きが気になる終わり方だった。</p>
+            <p class="font-display font-semibold">「読んでよかった本」を1冊追加</p>
+            <p class="mt-1 line-clamp-2 text-sm text-walnut/60">売野機子さんの『ありす、宇宙までも 5』を読了。続きが気になる終わり方だった。</p>
           </a>
         </li>
 
       </ul>
     </section>
 
-    <footer class="mt-24 border-t border-zinc-100 pt-6 text-xs text-zinc-300">
-      Mockup（G1-1）— docs/WBS.md 参照
+    <footer class="mt-24 border-t border-walnut/10 pt-6 text-xs text-walnut/30">
+      Mockup（G1-1, G1-7, G1-8, G1-9）— docs/WBS.md 参照
     </footer>
   </div>
+
+  <!-- ============ 追加モーダル：モノ ============ -->
+  <div id="modal-thing" class="fixed inset-0 z-50 hidden items-center justify-center bg-walnut/40 p-4">
+    <div class="w-full max-w-md rounded-2xl bg-paper p-6 shadow-warm">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 class="font-display text-lg font-semibold">モノを追加</h3>
+        <button type="button" onclick="closeModal('thing')" class="text-walnut/40 hover:text-walnut">✕</button>
+      </div>
+      <form class="flex flex-col gap-3">
+        <input type="text" placeholder="商品名（必須）" class="rounded-xl border border-walnut/15 bg-cream px-3 py-2 text-sm placeholder:text-walnut/35 focus:outline-none focus:ring-2 focus:ring-clay/40" />
+        <input type="text" placeholder="ブランド名" class="rounded-xl border border-walnut/15 bg-cream px-3 py-2 text-sm placeholder:text-walnut/35 focus:outline-none focus:ring-2 focus:ring-clay/40" />
+        <input type="url" placeholder="商品ページURL" class="rounded-xl border border-walnut/15 bg-cream px-3 py-2 text-sm placeholder:text-walnut/35 focus:outline-none focus:ring-2 focus:ring-clay/40" />
+        <textarea placeholder="メモ" rows="2" class="rounded-xl border border-walnut/15 bg-cream px-3 py-2 text-sm placeholder:text-walnut/35 focus:outline-none focus:ring-2 focus:ring-clay/40"></textarea>
+        <label class="rounded-xl border border-dashed border-walnut/25 bg-cream px-3 py-4 text-center text-sm text-walnut/40">
+          写真を選択
+          <input type="file" class="mt-1 block w-full text-xs" />
+        </label>
+        <button type="button" onclick="closeModal('thing')" class="mt-1 rounded-full bg-clay px-4 py-2.5 text-sm font-semibold text-paper hover:bg-clay/90">追加する</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ 追加モーダル：日記 ============ -->
+  <div id="modal-diary" class="fixed inset-0 z-50 hidden items-center justify-center bg-walnut/40 p-4">
+    <div class="w-full max-w-md rounded-2xl bg-paper p-6 shadow-warm">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 class="font-display text-lg font-semibold">日記を追加</h3>
+        <button type="button" onclick="closeModal('diary')" class="text-walnut/40 hover:text-walnut">✕</button>
+      </div>
+      <form class="flex flex-col gap-3">
+        <input type="date" value="2026-09-21" class="rounded-xl border border-walnut/15 bg-cream px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-clay/40" />
+        <input type="text" placeholder="タイトル（必須）" class="rounded-xl border border-walnut/15 bg-cream px-3 py-2 text-sm placeholder:text-walnut/35 focus:outline-none focus:ring-2 focus:ring-clay/40" />
+        <textarea placeholder="本文" rows="4" class="rounded-xl border border-walnut/15 bg-cream px-3 py-2 text-sm placeholder:text-walnut/35 focus:outline-none focus:ring-2 focus:ring-clay/40"></textarea>
+        <label class="rounded-xl border border-dashed border-walnut/25 bg-cream px-3 py-4 text-center text-sm text-walnut/40">
+          写真を選択（複数可）
+          <input type="file" multiple class="mt-1 block w-full text-xs" />
+        </label>
+        <button type="button" onclick="closeModal('diary')" class="mt-1 rounded-full bg-clay px-4 py-2.5 text-sm font-semibold text-paper hover:bg-clay/90">追加する</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ 追加モーダル：お店 ============ -->
+  <div id="modal-place" class="fixed inset-0 z-50 hidden items-center justify-center bg-walnut/40 p-4">
+    <div class="w-full max-w-md rounded-2xl bg-paper p-6 shadow-warm">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 class="font-display text-lg font-semibold">お店を追加</h3>
+        <button type="button" onclick="closeModal('place')" class="text-walnut/40 hover:text-walnut">✕</button>
+      </div>
+      <form class="flex flex-col gap-3">
+        <input type="text" placeholder="店名（必須）" class="rounded-xl border border-walnut/15 bg-cream px-3 py-2 text-sm placeholder:text-walnut/35 focus:outline-none focus:ring-2 focus:ring-clay/40" />
+        <input type="date" value="2026-09-21" class="rounded-xl border border-walnut/15 bg-cream px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-clay/40" />
+        <textarea placeholder="メモ（誰と行った、何が良かった等）" rows="2" class="rounded-xl border border-walnut/15 bg-cream px-3 py-2 text-sm placeholder:text-walnut/35 focus:outline-none focus:ring-2 focus:ring-clay/40"></textarea>
+        <label class="rounded-xl border border-dashed border-walnut/25 bg-cream px-3 py-4 text-center text-sm text-walnut/40">
+          写真を選択
+          <input type="file" class="mt-1 block w-full text-xs" />
+        </label>
+        <button type="button" onclick="closeModal('place')" class="mt-1 rounded-full bg-clay px-4 py-2.5 text-sm font-semibold text-paper hover:bg-clay/90">追加する</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    function openModal(kind) {
+      document.getElementById('modal-' + kind).classList.remove('hidden');
+      document.getElementById('modal-' + kind).classList.add('flex');
+    }
+    function closeModal(kind) {
+      document.getElementById('modal-' + kind).classList.add('hidden');
+      document.getElementById('modal-' + kind).classList.remove('flex');
+    }
+
+    var dayData = {
+      17: [{ type: 'diary', dot: 'bg-teal', label: 'Ken の日記：「読んでよかった本」を1冊追加', href: 'diary-detail.html' }],
+      18: [{ type: 'thing', dot: 'bg-mustard', label: 'Ken が追加：SIGMA / Sigma BF', href: 'thing-detail.html' }],
+      19: [{ type: 'diary', dot: 'bg-teal', label: 'パートナーの日記：新しいカフェでゆっくり読書', href: 'diary-detail.html' }],
+      20: [{ type: 'place', dot: 'bg-clay', label: 'Ken が訪問：Fuglen 浅草', href: 'place-detail.html' }],
+      21: [
+        { type: 'diary', dot: 'bg-teal', label: 'Ken の日記：週末はチームの歓迎会でひつじやへ', href: 'diary-detail.html' },
+        { type: 'thing', dot: 'bg-mustard', label: 'パートナーが追加：Apple / AirPods 4', href: 'thing-detail.html' },
+      ],
+    };
+
+    function selectDay(day) {
+      document.querySelectorAll('.day-cell.is-selected').forEach(function (el) {
+        el.classList.remove('is-selected', 'ring-2', 'ring-clay/60', 'font-semibold');
+      });
+      var items = dayData[day] || [];
+      var panel = document.getElementById('day-panel');
+      var dateLabel = '2026年9月' + day + '日';
+      if (items.length === 0) {
+        panel.innerHTML = '<p class="text-walnut/40">' + dateLabel + ' の記録はありません</p>';
+        return;
+      }
+      var html = '<p class="mb-2 font-medium text-walnut/70">' + dateLabel + 'の記録</p><ul class="flex flex-col gap-1.5">';
+      items.forEach(function (item) {
+        html += '<li><a href="' + item.href + '" class="flex items-center gap-2 hover:underline"><span class="dot ' + item.dot + '"></span>' + item.label + '</a></li>';
+      });
+      html += '</ul>';
+      panel.innerHTML = html;
+    }
+
+    selectDay(21);
+  </script>
 
 </body>
 </html>
