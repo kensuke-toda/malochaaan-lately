@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lately（モック）— トップページ</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white text-zinc-900">
+
+  <div class="mx-auto max-w-3xl px-4 py-16">
+    <!-- ヘッダー -->
+    <header class="mb-16 flex items-start justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold">Lately</h1>
+        <p class="mt-2 text-sm text-zinc-500">最近買ってよかったモノと、日々の日記。</p>
+      </div>
+      <a href="admin.html" class="text-xs text-zinc-400 underline">管理画面へ</a>
+    </header>
+
+    <!-- Things -->
+    <section class="mb-16">
+      <h2 class="mb-4 text-lg font-semibold">Things</h2>
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+
+        <a href="thing-detail.html" class="group flex flex-col gap-2">
+          <div class="relative aspect-square overflow-hidden rounded bg-zinc-100">
+            <img src="https://placehold.co/400x400/f4f4f5/a1a1aa?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] text-zinc-600 shadow-sm">Ken</span>
+          </div>
+          <div class="text-xs">
+            <p class="text-zinc-400">BAO BAO ISSEY MIYAKE</p>
+            <p class="line-clamp-2">CASSETTE</p>
+          </div>
+        </a>
+
+        <a href="thing-detail.html" class="group flex flex-col gap-2">
+          <div class="relative aspect-square overflow-hidden rounded bg-zinc-100">
+            <img src="https://placehold.co/400x400/f4f4f5/a1a1aa?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] text-zinc-600 shadow-sm">パートナー</span>
+          </div>
+          <div class="text-xs">
+            <p class="text-zinc-400">Apple</p>
+            <p class="line-clamp-2">AirPods 4</p>
+          </div>
+        </a>
+
+        <a href="thing-detail.html" class="group flex flex-col gap-2">
+          <div class="relative aspect-square overflow-hidden rounded bg-zinc-100">
+            <img src="https://placehold.co/400x400/f4f4f5/a1a1aa?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] text-zinc-600 shadow-sm">Ken</span>
+          </div>
+          <div class="text-xs">
+            <p class="text-zinc-400">SIGMA</p>
+            <p class="line-clamp-2">Sigma BF</p>
+          </div>
+        </a>
+
+        <a href="thing-detail.html" class="group flex flex-col gap-2">
+          <div class="relative aspect-square overflow-hidden rounded bg-zinc-100">
+            <img src="https://placehold.co/400x400/f4f4f5/a1a1aa?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] text-zinc-600 shadow-sm">パートナー</span>
+          </div>
+          <div class="text-xs">
+            <p class="text-zinc-400">FEILER</p>
+            <p class="line-clamp-2">トムとジェリー×FEILER ハンカチ</p>
+          </div>
+        </a>
+
+        <a href="thing-detail.html" class="group flex flex-col gap-2">
+          <div class="relative aspect-square overflow-hidden rounded bg-zinc-100">
+            <img src="https://placehold.co/400x400/f4f4f5/a1a1aa?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] text-zinc-600 shadow-sm">Ken</span>
+          </div>
+          <div class="text-xs">
+            <p class="text-zinc-400">objcts.io</p>
+            <p class="line-clamp-2">ソフトバックパック スモール</p>
+          </div>
+        </a>
+
+        <a href="thing-detail.html" class="group flex flex-col gap-2">
+          <div class="relative aspect-square overflow-hidden rounded bg-zinc-100">
+            <img src="https://placehold.co/400x400/f4f4f5/a1a1aa?text=Photo" alt="" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+            <span class="absolute bottom-1.5 left-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] text-zinc-600 shadow-sm">パートナー</span>
+          </div>
+          <div class="text-xs">
+            <p class="text-zinc-400">Amazon</p>
+            <p class="line-clamp-2">Kindle Scribe</p>
+          </div>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- Diary -->
+    <section>
+      <h2 class="mb-4 text-lg font-semibold">Diary</h2>
+      <ul class="flex flex-col gap-6">
+
+        <li>
+          <a href="diary-detail.html" class="block">
+            <div class="mb-1 flex items-center gap-2">
+              <span class="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-800 text-[10px] text-white">K</span>
+              <p class="text-xs text-zinc-400">Ken ・ 2026年9月21日</p>
+            </div>
+            <p class="font-medium">週末はチームの歓迎会でひつじやへ</p>
+            <p class="mt-1 line-clamp-2 text-sm text-zinc-600">四谷店で歓迎会。羊肉が思ったより食べやすくて美味しかった。次はランチにも行ってみたい。</p>
+          </a>
+        </li>
+
+        <li>
+          <a href="diary-detail.html" class="block">
+            <div class="mb-1 flex items-center gap-2">
+              <span class="flex h-5 w-5 items-center justify-center rounded-full bg-rose-400 text-[10px] text-white">P</span>
+              <p class="text-xs text-zinc-400">パートナー ・ 2026年9月19日</p>
+            </div>
+            <p class="font-medium">新しいカフェでゆっくり読書</p>
+            <p class="mt-1 line-clamp-2 text-sm text-zinc-600">近所に新しくできたカフェへ。窓際の席が気持ちよくて、気づいたら2時間くらい本を読んでいた。</p>
+          </a>
+        </li>
+
+        <li>
+          <a href="diary-detail.html" class="block">
+            <div class="mb-1 flex items-center gap-2">
+              <span class="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-800 text-[10px] text-white">K</span>
+              <p class="text-xs text-zinc-400">Ken ・ 2026年9月17日</p>
+            </div>
+            <p class="font-medium">「読んでよかった本」を1冊追加</p>
+            <p class="mt-1 line-clamp-2 text-sm text-zinc-600">売野機子さんの『ありす、宇宙までも 5』を読了。続きが気になる終わり方だった。</p>
+          </a>
+        </li>
+
+      </ul>
+    </section>
+
+    <footer class="mt-24 border-t border-zinc-100 pt-6 text-xs text-zinc-300">
+      Mockup（G1-1）— docs/WBS.md 参照
+    </footer>
+  </div>
+
+</body>
+</html>

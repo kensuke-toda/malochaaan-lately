@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lately（モック）— ログイン</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-white text-zinc-900">
+
+  <div class="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
+    <h1 class="mb-1 text-xl font-semibold">Lately</h1>
+    <p class="mb-6 text-sm text-zinc-500">アカウントでログインしてください</p>
+
+    <form class="flex flex-col gap-3">
+      <input type="email" placeholder="メールアドレス" class="rounded border border-zinc-300 px-3 py-2 text-sm" />
+      <input type="password" placeholder="パスワード" class="rounded border border-zinc-300 px-3 py-2 text-sm" />
+      <button type="button" onclick="location.href='admin.html'" class="rounded bg-zinc-900 px-3 py-2 text-sm text-white hover:bg-zinc-700">
+        ログイン
+      </button>
+    </form>
+
+    <p class="mt-6 text-xs text-zinc-400">
+      アカウントはKenが発行します。サインアップ画面はありません（G7-1決定済み）。
+    </p>
+
+    <footer class="mt-16 border-t border-zinc-100 pt-6 text-xs text-zinc-300">
+      Mockup（G1-4）— docs/WBS.md 参照
+    </footer>
+  </div>
+
+</body>
+</html>
