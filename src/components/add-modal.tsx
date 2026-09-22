@@ -240,15 +240,9 @@ export function AddModal({ kind, onClose }: { kind: ModalKind; onClose: () => vo
           )}
           {kind === "movie" && (
             <>
-              <textarea
-                name="body"
-                required
-                placeholder="何を観た？"
-                rows={5}
-                className="w-full min-w-0 resize-y rounded-xl bg-[#E8DFD0] px-3 py-3 text-base leading-relaxed"
-              />
-              <input name="entry_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
-              <FileField name="photos" label="写真を選択（複数可）" multiple />
+              <input name="title" required placeholder="タイトル（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <textarea name="body" placeholder="感想" rows={3} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <FileField name="image" label="写真を選択" />
             </>
           )}
           {kind === "work" && (

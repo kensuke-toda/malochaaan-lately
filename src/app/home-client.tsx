@@ -47,7 +47,7 @@ export function HomeClient({
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() });
   const [selectedDay, setSelectedDay] = useState<number | null>(now.getDate());
   const [photo, setPhoto] = useState<{ day: number; index: number } | null>(null);
-  const [scope, setScope] = useState<FeedScope>("everyone");
+  const [scope, setScope] = useState<FeedScope>(loggedIn && mine ? "mine" : "everyone");
   const { openAdd } = useAddFlow();
 
   useEffect(() => {
@@ -196,7 +196,7 @@ export function HomeClient({
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-[#6B6258]">
           <span>写真 = Places（右下の数字 = その日2件以上）</span>
-          <span>ドット: Things / Books / Sounds / Podcast / Posts / Movie / Works</span>
+          <span>ドット: Things / Books / Movies / Sounds / Podcast / Posts / Works</span>
         </div>
         <div className="mt-4 text-sm">
           {selectedDay == null ? null : !selectedBundle ? (
@@ -254,6 +254,29 @@ export function HomeClient({
                 </div>
                 <p className="mt-2 text-sm">{book.title}</p>
                 {book.author && <p className="text-xs text-[#6B6258]">{book.author}</p>}
+              </Link>
+            ))}
+          </CardScroller>
+        ) : (
+          <p className="text-sm text-[#6B6258]">まだありません。</p>
+        )}
+      </section>
+
+      <section id="movies" className="mb-16">
+        <SectionHead title="Movies" loggedIn={loggedIn} onAdd={() => openAdd("movie")} />
+        {data.movies.length ? (
+          <CardScroller>
+            {data.movies.map((movie) => (
+              <Link key={movie.id} href={`/movies/${movie.id}`} className="group block min-w-0">
+                <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
+                  {movie.image_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={movie.image_url} alt={movie.title} className="absolute inset-0 h-full w-full object-cover" />
+                  )}
+                  <AuthorTag name={authorName(movie)} className="absolute bottom-1.5 left-1.5" />
+                </div>
+                <p className="mt-2 text-sm">{movie.title}</p>
+                {movie.body && <p className="line-clamp-2 text-xs text-[#6B6258]">{movie.body}</p>}
               </Link>
             ))}
           </CardScroller>
@@ -333,40 +356,6 @@ export function HomeClient({
                   )}
                   <p className={`${cover ? "mt-0" : "mt-2"} text-xs text-[#6B6258]`}>{formatDate(post.entry_date)}</p>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{postText(post)}</p>
-                </Link>
-              );
-            })}
-          </CardScroller>
-        ) : (
-          <p className="text-sm text-[#6B6258]">まだありません。</p>
-        )}
-      </section>
-
-      <section id="movies" className="mb-16">
-        <SectionHead title="Movie" loggedIn={loggedIn} onAdd={() => openAdd("movie")} />
-        {data.movies.length ? (
-          <CardScroller full>
-            {data.movies.map((movie) => {
-              const photos = [...(movie.movie_photos ?? [])].sort((a, b) => a.sort_order - b.sort_order);
-              const cover = photos[0];
-              return (
-                <Link key={movie.id} href={`/movies/${movie.id}`} className="block min-w-0 rounded-xl bg-[#F4EEE4] p-4 ring-1 ring-[#2F2A24]/5">
-                  {cover ? (
-                    <div className="relative mb-3 aspect-[4/3] w-full overflow-hidden rounded-xl bg-[#E8DFD0]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={cover.image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                      <AuthorTag name={authorName(movie)} className="absolute bottom-1.5 left-1.5" />
-                      {photos.length > 1 && (
-                        <span className="absolute bottom-1.5 right-1.5 rounded bg-[#2F2A24]/80 px-1.5 py-0.5 text-[10px] font-semibold text-[#F4EEE4]">
-                          {photos.length}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <AuthorTag name={authorName(movie)} className="bg-[#E8DFD0]" />
-                  )}
-                  <p className={`${cover ? "mt-0" : "mt-2"} text-xs text-[#6B6258]`}>{formatDate(movie.entry_date)}</p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{postText(movie)}</p>
                 </Link>
               );
             })}
@@ -558,10 +547,10 @@ function DayList({
     ...bundle.places.map((p) => ({ href: `/places/${p.id}`, label: `行った場所：${p.name}` })),
     ...bundle.things.map((p) => ({ href: `/things/${p.id}`, label: `モノ：${p.name}` })),
     ...bundle.books.map((p) => ({ href: `/books/${p.id}`, label: `読んだ本：${p.title}` })),
+    ...bundle.movies.map((p) => ({ href: `/movies/${p.id}`, label: `映画：${p.title}` })),
     ...bundle.sounds.map((p) => ({ href: `/sounds/${p.id}`, label: `聴いた音楽：${p.title}` })),
     ...bundle.podcasts.map((p) => ({ href: `/podcasts/${p.id}`, label: `ポッドキャスト：${p.title}` })),
     ...bundle.posts.map((p) => ({ href: `/posts/${p.id}`, label: `投稿：${postPreview(p)}` })),
-    ...bundle.movies.map((p) => ({ href: `/movies/${p.id}`, label: `映画：${postPreview(p)}` })),
     ...bundle.works.map((p) => ({ href: `/works/${p.id}`, label: `仕事：${p.title}` })),
   ];
   if (!rows.length) return null;

@@ -242,37 +242,25 @@ export async function createPostAction(formData: FormData) {
 
 export async function createMovieAction(formData: FormData) {
   const user = await requireUser();
-  const body = String(formData.get("body") ?? "").trim();
-  if (!body) return { error: "本文は必須です" };
-  const supabase = await createUserClient();
-  const { data: movie, error } = await supabase
-    .from("movies")
-    .insert({
-      body,
-      entry_date: String(formData.get("entry_date") ?? "") || null,
-      created_by: user.id,
-    })
-    .select()
-    .single();
-  if (error || !movie) return { error: `保存に失敗しました: ${error?.message}` };
-
-  const photos = formData
-    .getAll("photos")
-    .filter((p): p is File => p instanceof File && p.size > 0);
-  for (let i = 0; i < photos.length; i++) {
-    let url: string;
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return { error: "タイトルは必須です" };
+  const image = formData.get("image");
+  let imageUrl: string | null = null;
+  if (image instanceof File && image.size > 0) {
     try {
-      url = await uploadImage("movies-images", photos[i]);
+      imageUrl = await uploadImage("movies-images", image);
     } catch (e) {
       return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
     }
-    const { error: photoError } = await supabase.from("movie_photos").insert({
-      movie_id: movie.id,
-      image_url: url,
-      sort_order: i,
-    });
-    if (photoError) return { error: `写真の保存に失敗しました: ${photoError.message}` };
   }
+  const supabase = await createUserClient();
+  const { error } = await supabase.from("movies").insert({
+    title,
+    body: String(formData.get("body") ?? "").trim() || null,
+    image_url: imageUrl,
+    created_by: user.id,
+  });
+  if (error) return { error: `保存に失敗しました: ${error.message}` };
   revalidateAll();
 }
 

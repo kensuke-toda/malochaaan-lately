@@ -40,7 +40,7 @@ export async function fetchHomeData(options: { createdBy?: string } = {}): Promi
     byAuthor(supabase.from("sounds").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
     byAuthor(supabase.from("podcasts").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
     byAuthor(supabase.from("posts").select(`*, post_photos(*), ${PROFILE}`)).order("entry_date", { ascending: false }).limit(24),
-    byAuthor(supabase.from("movies").select(`*, movie_photos(*), ${PROFILE}`)).order("entry_date", { ascending: false }).limit(24),
+    byAuthor(supabase.from("movies").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
     byAuthor(supabase.from("works").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
   ]);
 

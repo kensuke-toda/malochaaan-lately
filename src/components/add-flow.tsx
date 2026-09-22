@@ -7,10 +7,10 @@ const kinds: { kind: ModalKind; label: string }[] = [
   { kind: "place", label: "お店" },
   { kind: "thing", label: "モノ" },
   { kind: "book", label: "本" },
+  { kind: "movie", label: "映画" },
   { kind: "sound", label: "音楽" },
   { kind: "podcast", label: "ポッドキャスト" },
   { kind: "post", label: "投稿" },
-  { kind: "movie", label: "映画" },
   { kind: "work", label: "仕事" },
 ];
 

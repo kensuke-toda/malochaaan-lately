@@ -25,7 +25,9 @@ create table if not exists podcasts (
 
 create table if not exists movies (
   id uuid primary key default gen_random_uuid(),
-  body text not null,
+  title text not null,
+  body text,
+  image_url text,
   entry_date date not null default current_date,
   created_by uuid not null references public.profiles(id),
   created_at timestamptz not null default now()

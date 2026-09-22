@@ -81,7 +81,9 @@ export type MoviePhoto = {
 
 export type Movie = {
   id: string;
-  body: string;
+  title: string;
+  body: string | null;
+  image_url: string | null;
   entry_date: string;
   created_by: string;
   created_at: string;
