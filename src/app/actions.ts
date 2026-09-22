@@ -4,7 +4,8 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
-import { fetchOpenBdBook, isAllowedCoverUrl } from "@/lib/books/openbd";
+import { downloadAllowedCover, findFallbackCover } from "@/lib/books/covers";
+import { fetchOpenBdBook } from "@/lib/books/openbd";
 import { isBookIsbn, normalizeIsbn } from "@/lib/books/isbn";
 import { createUserClient } from "@/lib/supabase/server";
 
@@ -93,19 +94,8 @@ export async function createPlaceAction(formData: FormData) {
 }
 
 async function uploadCoverFromUrl(coverUrl: string) {
-  if (!isAllowedCoverUrl(coverUrl)) {
-    throw new Error("書影URLが不正です");
-  }
-  const res = await fetch(coverUrl, { redirect: "error", cache: "no-store" });
-  if (!res.ok) throw new Error("書影の取得に失敗しました");
-  const contentType = (res.headers.get("content-type") ?? "").split(";")[0].trim();
-  if (!contentType.startsWith("image/")) throw new Error("書影の取得に失敗しました");
-  const bytes = Buffer.from(await res.arrayBuffer());
-  if (bytes.byteLength === 0 || bytes.byteLength > 5 * 1024 * 1024) {
-    throw new Error("書影の取得に失敗しました");
-  }
-  const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
-  const file = new File([new Uint8Array(bytes)], `cover.${ext}`, { type: contentType || "image/jpeg" });
+  const cover = await downloadAllowedCover(coverUrl);
+  const file = new File([new Uint8Array(cover.bytes)], `cover.${cover.ext}`, { type: cover.contentType });
   return uploadImage("books-images", file);
 }
 
@@ -119,6 +109,9 @@ export async function lookupBookByIsbnAction(rawIsbn: string): Promise<{ book?: 
   try {
     const book = await fetchOpenBdBook(isbn);
     if (!book) return { error: "書誌情報が見つかりませんでした。手入力してください。" };
+    if (!book.coverUrl) {
+      book.coverUrl = await findFallbackCover(isbn);
+    }
     return { book };
   } catch {
     return { error: "書誌情報の取得に失敗しました" };

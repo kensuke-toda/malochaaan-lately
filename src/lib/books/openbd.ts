@@ -1,4 +1,5 @@
 import "server-only";
+import { isAllowedCoverUrl } from "@/lib/books/covers";
 import { isBookIsbn } from "@/lib/books/isbn";
 
 export type BookLookup = {
@@ -28,15 +29,6 @@ function cleanAuthor(raw: string) {
     .split(/\s+/)
     .filter(Boolean)
     .join("、");
-}
-
-export function isAllowedCoverUrl(raw: string) {
-  try {
-    const url = new URL(raw);
-    return url.protocol === "https:" && url.hostname === "cover.openbd.jp";
-  } catch {
-    return false;
-  }
 }
 
 export async function fetchOpenBdBook(isbn: string): Promise<BookLookup | null> {

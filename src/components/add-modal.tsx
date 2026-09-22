@@ -73,7 +73,7 @@ function BookFields({ disabled }: { disabled: boolean }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={coverUrl} alt="" className="h-20 w-14 shrink-0 rounded-md object-cover" />
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-[#6B6258]">openBDの書影を使います。下で写真を選ぶと差し替えます。</p>
+            <p className="text-xs text-[#6B6258]">取得した書影を使います。下で写真を選ぶと差し替えます。</p>
             <button
               type="button"
               disabled={disabled}
