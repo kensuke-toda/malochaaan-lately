@@ -8,7 +8,6 @@ import { authorName, formatDate, postPreview, postText, toDateKey, todayKey, tok
 
 const FEED_SCOPE_KEY = "lately.feedScope";
 type FeedScope = "mine" | "everyone";
-type HighlightItem = { href: string; label: string };
 
 function itemDate(kind: string, row: { visited_date?: string; entry_date?: string; created_at: string }) {
   if (kind === "place") return toDateKey(row.visited_date ?? row.created_at);
@@ -83,28 +82,6 @@ export function HomeClient({
     return map;
   }, [data]);
 
-  const highlights = useMemo(() => {
-    const inMonth = <T extends { created_at: string }>(rows: T[], kind: string, href: (r: T) => string, label: (r: T) => string) =>
-      [...rows]
-        .filter((r) => itemDate(kind, r as T & { created_at: string }).startsWith(monthPrefix))
-        .sort((a, b) => itemDate(kind, b as T & { created_at: string }).localeCompare(itemDate(kind, a as T & { created_at: string })))
-        .slice(0, 5)
-        .map((r) => ({ href: href(r), label: label(r) }));
-
-    return {
-      places: inMonth(data.places, "place", (r) => `/places/${r.id}`, (r) => r.name),
-      things: inMonth(data.things, "thing", (r) => `/things/${r.id}`, (r) => r.name),
-      books: inMonth(data.books, "book", (r) => `/books/${r.id}`, (r) => r.title),
-      sounds: inMonth(data.sounds, "sound", (r) => `/sounds/${r.id}`, (r) => r.title),
-      podcasts: inMonth(data.podcasts, "podcast", (r) => `/podcasts/${r.id}`, (r) => r.title),
-      posts: inMonth(data.posts, "post", (r) => `/posts/${r.id}`, (r) => postPreview(r)),
-      movies: inMonth(data.movies, "movie", (r) => `/movies/${r.id}`, (r) => postPreview(r)),
-      works: inMonth(data.works, "work", (r) => `/works/${r.id}`, (r) => r.title),
-    };
-  }, [data, monthPrefix]);
-
-  const hasHighlights = Object.values(highlights).some((list) => list.length > 0);
-
   const firstOfMonth = new Date(cursor.year, cursor.month, 1);
   const startWeekday = firstOfMonth.getDay();
   const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
@@ -146,47 +123,6 @@ export function HomeClient({
           Supabase が未設定です。<code>.env.local</code> に URL とキーを入れてください。画面の骨格はこのまま確認できます。
         </div>
       )}
-
-      <section className="mb-10 text-sm leading-relaxed text-[#3D362E]">
-        <p className="font-medium">日々の記録</p>
-        {hasHighlights && (
-          <div className="mt-2 divide-y divide-[#2F2A24]/10 rounded-xl bg-[#F4EEE4] px-3">
-            <MonthHighlight details="行った場所" items={highlights.places} />
-            <MonthHighlight details="モノ" items={highlights.things} />
-            <MonthHighlight details="読んだ本" items={highlights.books} />
-            <MonthHighlight details="聴いた音楽" items={highlights.sounds} />
-            <MonthHighlight details="ポッドキャスト" items={highlights.podcasts} />
-            <MonthHighlight details="投稿" items={highlights.posts} />
-            <MonthHighlight details="映画" items={highlights.movies} />
-            <MonthHighlight details="仕事" items={highlights.works} />
-          </div>
-        )}
-      </section>
-
-      <nav className="mb-10 flex flex-wrap gap-2 text-sm">
-        {[
-          ["#places", "Places"],
-          ["#things", "Things"],
-          ["#books", "Books"],
-          ["#sounds", "Sounds"],
-          ["#podcasts", "Podcast"],
-          ["#posts", "Posts"],
-          ["#movies", "Movie"],
-          ["#works", "Works"],
-        ].map(([href, label], i) => (
-          <a
-            key={href}
-            href={href}
-            className={
-              i === 0
-                ? "rounded-full bg-[#2F2A24] px-3 py-1 text-[#F4EEE4]"
-                : "rounded-full bg-[#F4EEE4] px-3 py-1 ring-1 ring-[#2F2A24]/10"
-            }
-          >
-            {label}
-          </a>
-        ))}
-      </nav>
 
       <section id="places" className="mb-16">
         <SectionHead
@@ -578,27 +514,6 @@ function FeedScopeBar({
         );
       })}
     </div>
-  );
-}
-
-function MonthHighlight({ details, items }: { details: string; items: HighlightItem[] }) {
-  if (!items.length) return null;
-  return (
-    <details className="py-2">
-      <summary className="flex cursor-pointer list-none items-center justify-between py-1">
-        <span>› {details}</span>
-        <span className="text-xs text-[#6B6258]">{items.length}</span>
-      </summary>
-      <ul className="mt-1 list-disc space-y-0.5 pb-2 pl-5">
-        {items.map((item) => (
-          <li key={item.href + item.label}>
-            <Link href={item.href} className="underline decoration-[#2F2A24]/20 underline-offset-2">
-              {item.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </details>
   );
 }
 
