@@ -58,14 +58,14 @@ function BookFields({ disabled }: { disabled: boolean }) {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="書名（必須）"
-        className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm"
+        className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base"
       />
       <input
         name="author"
         value={author}
         onChange={(e) => setAuthor(e.target.value)}
         placeholder="著者"
-        className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm"
+        className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base"
       />
       <input type="hidden" name="cover_url" value={coverUrl} />
       {coverUrl ? (
@@ -85,11 +85,11 @@ function BookFields({ disabled }: { disabled: boolean }) {
           </div>
         </div>
       ) : null}
-      <select name="status" defaultValue="finished" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm">
+      <select name="status" defaultValue="finished" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base">
         <option value="finished">読了</option>
         <option value="reading">読書中</option>
       </select>
-      <textarea name="memo" placeholder="感想・メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
+      <textarea name="memo" placeholder="感想・メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
       <FileField name="image" label={coverUrl ? "カバー画像を選び直す" : "カバー画像を選択"} />
     </>
   );
@@ -175,7 +175,7 @@ export function AddModal({ kind, onClose }: { kind: ModalKind; onClose: () => vo
         if (e.target === e.currentTarget && !pending) onClose();
       }}
     >
-      <div className="max-h-[min(92dvh,46rem)] w-full max-w-md overflow-y-auto rounded-t-2xl bg-[#F4EEE4] p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:rounded-2xl sm:pb-6">
+      <div className="max-h-[min(calc(100dvh-env(safe-area-inset-top)),46rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl bg-[#F4EEE4] p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:rounded-2xl sm:pb-6">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-display text-lg font-semibold">{titles[kind]}</h3>
           <button type="button" onClick={onClose} disabled={pending} className="min-h-11 min-w-11 text-[#6B6258]">
@@ -185,28 +185,28 @@ export function AddModal({ kind, onClose }: { kind: ModalKind; onClose: () => vo
         <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
           {kind === "place" && (
             <>
-              <input name="name" required placeholder="店名（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="visited_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
+              <input name="name" required placeholder="店名（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <input name="visited_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <FileField name="image" label="お店の写真を選択" />
             </>
           )}
           {kind === "thing" && (
             <>
-              <input name="name" required placeholder="商品名（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="brand" placeholder="ブランド名" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="product_url" type="url" placeholder="商品ページURL" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
+              <input name="name" required placeholder="商品名（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <input name="brand" placeholder="ブランド名" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <input name="product_url" type="url" placeholder="商品ページURL" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <FileField name="image" label="写真を選択" />
             </>
           )}
           {kind === "book" && <BookFields disabled={pending} />}
           {kind === "sound" && (
             <>
-              <input name="title" required placeholder="曲名（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="artist" placeholder="アーティスト" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="url" type="url" placeholder="リンク" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
+              <input name="title" required placeholder="曲名（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <input name="artist" placeholder="アーティスト" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <input name="url" type="url" placeholder="リンク" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <FileField name="image" label="ジャケット画像を選択" />
             </>
           )}
@@ -217,17 +217,17 @@ export function AddModal({ kind, onClose }: { kind: ModalKind; onClose: () => vo
                 required
                 placeholder="いまなにしてる？"
                 rows={5}
-                className="w-full min-w-0 resize-y rounded-xl bg-[#E8DFD0] px-3 py-3 text-sm leading-relaxed"
+                className="w-full min-w-0 resize-y rounded-xl bg-[#E8DFD0] px-3 py-3 text-base leading-relaxed"
               />
-              <input name="entry_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
+              <input name="entry_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <FileField name="photos" label="写真を選択（複数可）" multiple />
             </>
           )}
           {kind === "work" && (
             <>
-              <input name="title" required placeholder="タイトル（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="period_label" placeholder="期間（例: 2026年9月〜）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <textarea name="summary" placeholder="サマリ" rows={4} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
+              <input name="title" required placeholder="タイトル（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <input name="period_label" placeholder="期間（例: 2026年9月〜）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <textarea name="summary" placeholder="サマリ" rows={4} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
             </>
           )}
           {error ? <p className="text-sm text-[#B85C38]">{error}</p> : null}

@@ -319,34 +319,33 @@ export function HomeClient({
       <section id="posts" className="mb-16">
         <SectionHead title="Posts" loggedIn={loggedIn} onAdd={() => openAdd("post")} />
         {data.posts.length ? (
-          <ul className="flex flex-col gap-4">
+          <CardScroller wide>
             {data.posts.map((post) => {
               const photos = [...(post.post_photos ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+              const cover = photos[0];
               return (
-                <li key={post.id} className="rounded-xl bg-[#F4EEE4] p-4 ring-1 ring-[#2F2A24]/5">
-                  <Link href={`/posts/${post.id}`} className="block">
+                <Link key={post.id} href={`/posts/${post.id}`} className="group flex h-full min-w-0 flex-col overflow-hidden rounded-xl bg-[#F4EEE4] ring-1 ring-[#2F2A24]/5">
+                  {cover ? (
+                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#E8DFD0]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={cover.image_url} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105" />
+                      {photos.length > 1 && (
+                        <span className="absolute bottom-1.5 right-1.5 rounded bg-[#2F2A24]/80 px-1.5 py-0.5 text-[10px] font-semibold text-[#F4EEE4]">
+                          {photos.length}
+                        </span>
+                      )}
+                    </div>
+                  ) : null}
+                  <div className="flex flex-1 flex-col p-3">
                     <p className="text-xs text-[#6B6258]">
                       {authorName(post)} ・ {formatDate(post.entry_date)}
                     </p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{postText(post)}</p>
-                    {photos.length > 0 && (
-                      <div className={`mt-3 grid gap-2 ${photos.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-                        {photos.slice(0, 4).map((photo) => (
-                          <div
-                            key={photo.id}
-                            className={`relative overflow-hidden rounded-xl bg-[#E8DFD0] ${photos.length === 1 ? "aspect-[4/3]" : "aspect-square"}`}
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={photo.image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </Link>
-                </li>
+                    <p className="mt-1.5 line-clamp-5 text-sm leading-relaxed">{postText(post)}</p>
+                  </div>
+                </Link>
               );
             })}
-          </ul>
+          </CardScroller>
         ) : (
           <p className="text-sm text-[#6B6258]">まだありません。</p>
         )}
@@ -355,17 +354,15 @@ export function HomeClient({
       <section id="works" className="mb-8">
         <SectionHead title="Works" loggedIn={loggedIn} onAdd={() => openAdd("work")} />
         {data.works.length ? (
-          <ul className="flex flex-col gap-4">
+          <CardScroller wide>
             {data.works.map((work) => (
-              <li key={work.id} className="rounded-xl bg-[#F4EEE4] p-4 ring-1 ring-[#2F2A24]/5">
-                <Link href={`/works/${work.id}`} className="block">
-                  {work.period_label && <p className="text-xs text-[#6B6258]">{work.period_label}</p>}
-                  <p className="mt-1 font-display font-semibold">{work.title}</p>
-                  {work.summary && <p className="mt-1 text-sm text-[#6B6258]">{work.summary}</p>}
-                </Link>
-              </li>
+              <Link key={work.id} href={`/works/${work.id}`} className="flex h-full min-w-0 flex-col rounded-xl bg-[#F4EEE4] p-4 ring-1 ring-[#2F2A24]/5">
+                {work.period_label && <p className="text-xs text-[#6B6258]">{work.period_label}</p>}
+                <p className="mt-1 font-display font-semibold">{work.title}</p>
+                {work.summary && <p className="mt-2 line-clamp-5 text-sm leading-relaxed text-[#6B6258]">{work.summary}</p>}
+              </Link>
             ))}
-          </ul>
+          </CardScroller>
         ) : (
           <p className="text-sm text-[#6B6258]">まだありません。</p>
         )}
@@ -428,11 +425,19 @@ export function HomeClient({
   );
 }
 
-function CardScroller({ children }: { children: ReactNode }) {
+function CardScroller({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return (
     <div className="flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin]">
       {Children.map(children, (child) => (
-        <div className="w-[calc((100%-1.25rem)/2)] shrink-0 snap-start sm:w-[calc((100%-2.5rem)/3)]">{child}</div>
+        <div
+          className={
+            wide
+              ? "flex w-[calc(100%-2.5rem)] shrink-0 snap-start flex-col sm:w-[calc((100%-1.25rem)/2)]"
+              : "flex w-[calc((100%-1.25rem)/2)] shrink-0 snap-start flex-col sm:w-[calc((100%-2.5rem)/3)]"
+          }
+        >
+          {child}
+        </div>
       ))}
     </div>
   );

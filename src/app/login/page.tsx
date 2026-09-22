@@ -17,14 +17,14 @@ export default async function LoginPage({
           name="email"
           placeholder="メールアドレス"
           required
-          className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm"
+          className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base"
         />
         <input
           type="password"
           name="password"
           placeholder="パスワード"
           required
-          className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm"
+          className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base"
         />
         <button type="submit" className="rounded-full bg-[#B85C38] px-3 py-2.5 text-sm font-semibold text-[#F4EEE4]">
           ログイン

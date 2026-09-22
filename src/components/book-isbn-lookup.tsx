@@ -106,7 +106,7 @@ export function BookIsbnLookup({
           autoComplete="off"
           placeholder="ISBN（978…）"
           disabled={locked}
-          className="min-w-0 flex-1 rounded-xl bg-[#F4EEE4] px-3 py-2 text-sm"
+          className="min-w-0 flex-1 rounded-xl bg-[#F4EEE4] px-3 py-2.5 text-base"
         />
         <button
           type="button"
