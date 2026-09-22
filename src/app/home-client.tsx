@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Children, useMemo, useState, type ReactNode } from "react";
+import { Children, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAddFlow } from "@/components/add-flow";
 import type { HomeData } from "@/lib/data";
 import { authorName, formatDate, postPreview, postText, toDateKey, todayKey, tokyoNow } from "@/lib/utils";
 
-type HighlightItem = { href: string; label: string };
+const FEED_SCOPE_KEY = "lately.feedScope";
+type FeedScope = "mine" | "everyone";
 
 function itemDate(kind: string, row: { visited_date?: string; entry_date?: string; created_at: string }) {
   if (kind === "place") return toDateKey(row.visited_date ?? row.created_at);
@@ -15,12 +16,14 @@ function itemDate(kind: string, row: { visited_date?: string; entry_date?: strin
 }
 
 export function HomeClient({
-  data,
+  everyone,
+  mine,
   loggedIn,
   displayName,
   configured,
 }: {
-  data: HomeData;
+  everyone: HomeData;
+  mine: HomeData | null;
   loggedIn: boolean;
   displayName: string | null;
   configured: boolean;
@@ -29,7 +32,21 @@ export function HomeClient({
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() });
   const [selectedDay, setSelectedDay] = useState<number | null>(now.getDate());
   const [photo, setPhoto] = useState<{ day: number; index: number } | null>(null);
+  const [scope, setScope] = useState<FeedScope>("everyone");
   const { openAdd } = useAddFlow();
+
+  useEffect(() => {
+    if (!loggedIn || !mine) return;
+    const saved = window.localStorage.getItem(FEED_SCOPE_KEY);
+    if (saved === "mine" || saved === "everyone") setScope(saved);
+  }, [loggedIn, mine]);
+
+  function changeScope(next: FeedScope) {
+    setScope(next);
+    window.localStorage.setItem(FEED_SCOPE_KEY, next);
+  }
+
+  const data = loggedIn && mine && scope === "mine" ? mine : everyone;
 
   const monthPrefix = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}`;
 
@@ -59,26 +76,6 @@ export function HomeClient({
     data.works.forEach((p) => bump(itemDate("work", p)).works.push(p));
     return map;
   }, [data]);
-
-  const highlights = useMemo(() => {
-    const inMonth = <T extends { created_at: string }>(rows: T[], kind: string, href: (r: T) => string, label: (r: T) => string) =>
-      [...rows]
-        .filter((r) => itemDate(kind, r as T & { created_at: string }).startsWith(monthPrefix))
-        .sort((a, b) => itemDate(kind, b as T & { created_at: string }).localeCompare(itemDate(kind, a as T & { created_at: string })))
-        .slice(0, 5)
-        .map((r) => ({ href: href(r), label: label(r) }));
-
-    return {
-      places: inMonth(data.places, "place", (r) => `/places/${r.id}`, (r) => r.name),
-      things: inMonth(data.things, "thing", (r) => `/things/${r.id}`, (r) => r.name),
-      books: inMonth(data.books, "book", (r) => `/books/${r.id}`, (r) => r.title),
-      sounds: inMonth(data.sounds, "sound", (r) => `/sounds/${r.id}`, (r) => r.title),
-      posts: inMonth(data.posts, "post", (r) => `/posts/${r.id}`, (r) => postPreview(r)),
-      works: inMonth(data.works, "work", (r) => `/works/${r.id}`, (r) => r.title),
-    };
-  }, [data, monthPrefix]);
-
-  const hasHighlights = Object.values(highlights).some((list) => list.length > 0);
 
   const firstOfMonth = new Date(cursor.year, cursor.month, 1);
   const startWeekday = firstOfMonth.getDay();
@@ -114,48 +111,13 @@ export function HomeClient({
         <p className={`text-xs text-[#6B6258]/70${displayName ? " mt-1" : ""}`}>更新日：{formatDate(todayKey())}</p>
       </header>
 
+      {loggedIn && mine ? <FeedScopeBar scope={scope} onChange={changeScope} /> : null}
+
       {!configured && (
         <div className="mb-8 rounded-xl bg-[#F4EEE4] px-4 py-3 text-sm text-[#6B6258]">
           Supabase が未設定です。<code>.env.local</code> に URL とキーを入れてください。画面の骨格はこのまま確認できます。
         </div>
       )}
-
-      <section className="mb-10 text-sm leading-relaxed text-[#3D362E]">
-        <p className="font-medium">日々の記録</p>
-        {hasHighlights && (
-          <div className="mt-2 divide-y divide-[#2F2A24]/10 rounded-xl bg-[#F4EEE4] px-3">
-            <Highlight details="行った場所" items={highlights.places} />
-            <Highlight details="モノ" items={highlights.things} />
-            <Highlight details="読んだ本" items={highlights.books} />
-            <Highlight details="聴いた音楽" items={highlights.sounds} />
-            <Highlight details="投稿" items={highlights.posts} />
-            <Highlight details="仕事" items={highlights.works} />
-          </div>
-        )}
-      </section>
-
-      <nav className="mb-10 flex flex-wrap gap-2 text-sm">
-        {[
-          ["#places", "Places"],
-          ["#things", "Things"],
-          ["#books", "Books"],
-          ["#sounds", "Sounds"],
-          ["#posts", "Posts"],
-          ["#works", "Works"],
-        ].map(([href, label], i) => (
-          <a
-            key={href}
-            href={href}
-            className={
-              i === 0
-                ? "rounded-full bg-[#2F2A24] px-3 py-1 text-[#F4EEE4]"
-                : "rounded-full bg-[#F4EEE4] px-3 py-1 ring-1 ring-[#2F2A24]/10"
-            }
-          >
-            {label}
-          </a>
-        ))}
-      </nav>
 
       <section id="places" className="mb-16">
         <SectionHead
@@ -319,29 +281,33 @@ export function HomeClient({
       <section id="posts" className="mb-16">
         <SectionHead title="Posts" loggedIn={loggedIn} onAdd={() => openAdd("post")} />
         {data.posts.length ? (
-          <CardScroller wide>
+          <CardScroller>
             {data.posts.map((post) => {
               const photos = [...(post.post_photos ?? [])].sort((a, b) => a.sort_order - b.sort_order);
               const cover = photos[0];
               return (
-                <Link key={post.id} href={`/posts/${post.id}`} className="group flex h-full min-w-0 flex-col overflow-hidden rounded-xl bg-[#F4EEE4] ring-1 ring-[#2F2A24]/5">
-                  {cover ? (
-                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-[#E8DFD0]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={cover.image_url} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105" />
-                      {photos.length > 1 && (
-                        <span className="absolute bottom-1.5 right-1.5 rounded bg-[#2F2A24]/80 px-1.5 py-0.5 text-[10px] font-semibold text-[#F4EEE4]">
-                          {photos.length}
-                        </span>
-                      )}
-                    </div>
-                  ) : null}
-                  <div className="flex flex-1 flex-col p-3">
-                    <p className="text-xs text-[#6B6258]">
-                      {authorName(post)} ・ {formatDate(post.entry_date)}
-                    </p>
-                    <p className="mt-1.5 line-clamp-5 text-sm leading-relaxed">{postText(post)}</p>
+                <Link key={post.id} href={`/posts/${post.id}`} className="group block min-w-0">
+                  <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
+                    {cover ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={cover.image_url}
+                          alt=""
+                          className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
+                        />
+                        {photos.length > 1 && (
+                          <span className="absolute bottom-1.5 right-1.5 rounded bg-[#2F2A24]/80 px-1.5 py-0.5 text-[10px] font-semibold text-[#F4EEE4]">
+                            {photos.length}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <p className="absolute inset-0 p-3 text-sm leading-relaxed text-[#3D362E] line-clamp-6">{postText(post)}</p>
+                    )}
                   </div>
+                  <p className="mt-2 text-xs text-[#6B6258]">{authorName(post)}</p>
+                  <p className="text-sm">{formatDate(post.entry_date)}</p>
                 </Link>
               );
             })}
@@ -354,12 +320,14 @@ export function HomeClient({
       <section id="works" className="mb-8">
         <SectionHead title="Works" loggedIn={loggedIn} onAdd={() => openAdd("work")} />
         {data.works.length ? (
-          <CardScroller wide>
+          <CardScroller>
             {data.works.map((work) => (
-              <Link key={work.id} href={`/works/${work.id}`} className="flex h-full min-w-0 flex-col rounded-xl bg-[#F4EEE4] p-4 ring-1 ring-[#2F2A24]/5">
-                {work.period_label && <p className="text-xs text-[#6B6258]">{work.period_label}</p>}
-                <p className="mt-1 font-display font-semibold">{work.title}</p>
-                {work.summary && <p className="mt-2 line-clamp-5 text-sm leading-relaxed text-[#6B6258]">{work.summary}</p>}
+              <Link key={work.id} href={`/works/${work.id}`} className="block min-w-0">
+                <div className="flex aspect-square w-full flex-col justify-end overflow-hidden rounded-xl bg-[#F4EEE4] p-3">
+                  {work.period_label && <p className="text-xs text-[#6B6258]">{work.period_label}</p>}
+                  <p className="mt-1 font-display font-semibold leading-snug">{work.title}</p>
+                  {work.summary && <p className="mt-2 line-clamp-4 text-sm leading-relaxed text-[#6B6258]">{work.summary}</p>}
+                </div>
               </Link>
             ))}
           </CardScroller>
@@ -425,17 +393,11 @@ export function HomeClient({
   );
 }
 
-function CardScroller({ children, wide }: { children: ReactNode; wide?: boolean }) {
+function CardScroller({ children }: { children: ReactNode }) {
   return (
     <div className="flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin]">
       {Children.map(children, (child) => (
-        <div
-          className={
-            wide
-              ? "flex w-[calc(100%-2.5rem)] shrink-0 snap-start flex-col sm:w-[calc((100%-1.25rem)/2)]"
-              : "flex w-[calc((100%-1.25rem)/2)] shrink-0 snap-start flex-col sm:w-[calc((100%-2.5rem)/3)]"
-          }
-        >
+        <div className="flex w-[calc((100%-1.25rem)/2)] shrink-0 snap-start flex-col sm:w-[calc((100%-2.5rem)/3)]">
           {child}
         </div>
       ))}
@@ -443,24 +405,41 @@ function CardScroller({ children, wide }: { children: ReactNode; wide?: boolean 
   );
 }
 
-function Highlight({ details, items }: { details: string; items: HighlightItem[] }) {
-  if (!items.length) return null;
+function FeedScopeBar({
+  scope,
+  onChange,
+}: {
+  scope: FeedScope;
+  onChange: (scope: FeedScope) => void;
+}) {
+  const options: { id: FeedScope; label: string }[] = [
+    { id: "mine", label: "自分の投稿だけ" },
+    { id: "everyone", label: "みんなの投稿も表示" },
+  ];
   return (
-    <details className="py-2">
-      <summary className="flex cursor-pointer list-none items-center justify-between py-1">
-        <span>› {details}</span>
-        <span className="text-xs text-[#6B6258]">{items.length}</span>
-      </summary>
-      <ul className="mt-1 list-disc space-y-0.5 pb-2 pl-5">
-        {items.map((item) => (
-          <li key={item.href + item.label}>
-            <Link href={item.href} className="underline decoration-[#2F2A24]/20 underline-offset-2">
-              {item.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </details>
+    <div
+      className="mb-8 grid grid-cols-2 rounded-full bg-[#F4EEE4] p-1 text-xs sm:text-sm"
+      role="radiogroup"
+      aria-label="表示する投稿"
+    >
+      {options.map((option) => {
+        const on = scope === option.id;
+        return (
+          <button
+            key={option.id}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(option.id)}
+            className={`min-h-11 rounded-full px-2 py-2 font-medium sm:px-3 ${
+              on ? "bg-[#2F2A24] text-[#F4EEE4]" : "text-[#6B6258]"
+            }`}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

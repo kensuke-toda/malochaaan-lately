@@ -13,25 +13,29 @@ export type HomeData = {
   works: Work[];
 };
 
-export async function fetchHomeData(): Promise<HomeData> {
-  const empty: HomeData = {
-    things: [],
-    places: [],
-    books: [],
-    sounds: [],
-    posts: [],
-    works: [],
-  };
-  if (!isSupabaseConfigured()) return empty;
+export const emptyHomeData: HomeData = {
+  things: [],
+  places: [],
+  books: [],
+  sounds: [],
+  posts: [],
+  works: [],
+};
+
+export async function fetchHomeData(options: { createdBy?: string } = {}): Promise<HomeData> {
+  if (!isSupabaseConfigured()) return emptyHomeData;
 
   const supabase = createClient();
+  const { createdBy } = options;
+  const byAuthor = (query: any) => (createdBy ? query.eq("created_by", createdBy) : query);
+
   const [things, places, books, sounds, posts, works] = await Promise.all([
-    supabase.from("things").select(`*, ${PROFILE}`).order("sort_order").order("created_at", { ascending: false }).limit(24),
-    supabase.from("places").select(`*, ${PROFILE}`).order("visited_date", { ascending: false }).limit(24),
-    supabase.from("books").select(`*, ${PROFILE}`).order("created_at", { ascending: false }).limit(24),
-    supabase.from("sounds").select(`*, ${PROFILE}`).order("created_at", { ascending: false }).limit(24),
-    supabase.from("posts").select(`*, post_photos(*), ${PROFILE}`).order("entry_date", { ascending: false }).limit(24),
-    supabase.from("works").select(`*, ${PROFILE}`).order("created_at", { ascending: false }).limit(24),
+    byAuthor(supabase.from("things").select(`*, ${PROFILE}`)).order("sort_order").order("created_at", { ascending: false }).limit(24),
+    byAuthor(supabase.from("places").select(`*, ${PROFILE}`)).order("visited_date", { ascending: false }).limit(24),
+    byAuthor(supabase.from("books").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
+    byAuthor(supabase.from("sounds").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
+    byAuthor(supabase.from("posts").select(`*, post_photos(*), ${PROFILE}`)).order("entry_date", { ascending: false }).limit(24),
+    byAuthor(supabase.from("works").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
   ]);
 
   return {
