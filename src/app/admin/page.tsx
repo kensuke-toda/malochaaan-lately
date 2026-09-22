@@ -2,7 +2,9 @@ import Link from "next/link";
 import { formatDate, postPreview } from "@/lib/utils";
 import {
   deleteBookAction,
+  deleteMovieAction,
   deletePlaceAction,
+  deletePodcastAction,
   deletePostAction,
   deleteSoundAction,
   deleteThingAction,
@@ -85,6 +87,15 @@ export default async function AdminPage() {
         action={deleteSoundAction}
       />
       <AdminList
+        title="Podcast"
+        rows={data.podcasts.map((p) => ({
+          id: p.id,
+          label: `${p.artist ? `${p.artist} / ` : ""}${p.title}`,
+          mine: p.created_by === user.id,
+        }))}
+        action={deletePodcastAction}
+      />
+      <AdminList
         title="Posts"
         rows={data.posts.map((p) => ({
           id: p.id,
@@ -92,6 +103,15 @@ export default async function AdminPage() {
           mine: p.created_by === user.id,
         }))}
         action={deletePostAction}
+      />
+      <AdminList
+        title="Movie"
+        rows={data.movies.map((p) => ({
+          id: p.id,
+          label: `${formatDate(p.entry_date)} ・ ${postPreview(p, 48)}`,
+          mine: p.created_by === user.id,
+        }))}
+        action={deleteMovieAction}
       />
       <AdminList
         title="Works"

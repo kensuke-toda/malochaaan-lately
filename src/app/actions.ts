@@ -178,6 +178,32 @@ export async function createSoundAction(formData: FormData) {
   revalidateAll();
 }
 
+export async function createPodcastAction(formData: FormData) {
+  const user = await requireUser();
+  const title = String(formData.get("title") ?? "").trim();
+  if (!title) return { error: "エピソード名は必須です" };
+  const image = formData.get("image");
+  let imageUrl: string | null = null;
+  if (image instanceof File && image.size > 0) {
+    try {
+      imageUrl = await uploadImage("podcasts-images", image);
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
+    }
+  }
+  const supabase = await createUserClient();
+  const { error } = await supabase.from("podcasts").insert({
+    title,
+    artist: String(formData.get("artist") ?? "").trim() || null,
+    url: String(formData.get("url") ?? "").trim() || null,
+    memo: String(formData.get("memo") ?? "").trim() || null,
+    image_url: imageUrl,
+    created_by: user.id,
+  });
+  if (error) return { error: `保存に失敗しました: ${error.message}` };
+  revalidateAll();
+}
+
 export async function createPostAction(formData: FormData) {
   const user = await requireUser();
   const body = String(formData.get("body") ?? "").trim();
@@ -206,6 +232,42 @@ export async function createPostAction(formData: FormData) {
     }
     const { error: photoError } = await supabase.from("post_photos").insert({
       post_id: post.id,
+      image_url: url,
+      sort_order: i,
+    });
+    if (photoError) return { error: `写真の保存に失敗しました: ${photoError.message}` };
+  }
+  revalidateAll();
+}
+
+export async function createMovieAction(formData: FormData) {
+  const user = await requireUser();
+  const body = String(formData.get("body") ?? "").trim();
+  if (!body) return { error: "本文は必須です" };
+  const supabase = await createUserClient();
+  const { data: movie, error } = await supabase
+    .from("movies")
+    .insert({
+      body,
+      entry_date: String(formData.get("entry_date") ?? "") || null,
+      created_by: user.id,
+    })
+    .select()
+    .single();
+  if (error || !movie) return { error: `保存に失敗しました: ${error?.message}` };
+
+  const photos = formData
+    .getAll("photos")
+    .filter((p): p is File => p instanceof File && p.size > 0);
+  for (let i = 0; i < photos.length; i++) {
+    let url: string;
+    try {
+      url = await uploadImage("movies-images", photos[i]);
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
+    }
+    const { error: photoError } = await supabase.from("movie_photos").insert({
+      movie_id: movie.id,
       image_url: url,
       sort_order: i,
     });
@@ -249,8 +311,14 @@ export async function deleteBookAction(formData: FormData) {
 export async function deleteSoundAction(formData: FormData) {
   await deleteOwn("sounds", String(formData.get("id") ?? ""));
 }
+export async function deletePodcastAction(formData: FormData) {
+  await deleteOwn("podcasts", String(formData.get("id") ?? ""));
+}
 export async function deletePostAction(formData: FormData) {
   await deleteOwn("posts", String(formData.get("id") ?? ""));
+}
+export async function deleteMovieAction(formData: FormData) {
+  await deleteOwn("movies", String(formData.get("id") ?? ""));
 }
 export async function deleteWorkAction(formData: FormData) {
   await deleteOwn("works", String(formData.get("id") ?? ""));

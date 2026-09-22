@@ -52,6 +52,8 @@ export type Sound = {
   profiles?: Profile | null;
 };
 
+export type Podcast = Sound;
+
 export type PostPhoto = {
   id: string;
   post_id: string;
@@ -67,6 +69,23 @@ export type Post = {
   created_by: string;
   created_at: string;
   post_photos?: PostPhoto[];
+  profiles?: Profile | null;
+};
+
+export type MoviePhoto = {
+  id: string;
+  movie_id: string;
+  image_url: string;
+  sort_order: number;
+};
+
+export type Movie = {
+  id: string;
+  body: string;
+  entry_date: string;
+  created_by: string;
+  created_at: string;
+  movie_photos?: MoviePhoto[];
   profiles?: Profile | null;
 };
 

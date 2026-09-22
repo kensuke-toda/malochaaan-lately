@@ -3,7 +3,9 @@
 import { useState, type FormEvent } from "react";
 import {
   createBookAction,
+  createMovieAction,
   createPlaceAction,
+  createPodcastAction,
   createPostAction,
   createSoundAction,
   createThingAction,
@@ -13,7 +15,7 @@ import {
 import { BookIsbnLookup } from "@/components/book-isbn-lookup";
 import { todayKey } from "@/lib/utils";
 
-export type ModalKind = "place" | "thing" | "book" | "sound" | "post" | "work";
+export type ModalKind = "place" | "thing" | "book" | "sound" | "podcast" | "post" | "movie" | "work";
 
 async function compressImage(file: File): Promise<File> {
   try {
@@ -126,7 +128,9 @@ export function AddModal({ kind, onClose }: { kind: ModalKind; onClose: () => vo
     thing: "モノを追加",
     book: "本を追加",
     sound: "音楽を追加",
+    podcast: "ポッドキャストを追加",
     post: "投稿を追加",
+    movie: "映画を追加",
     work: "仕事を追加",
   };
   const actions = {
@@ -134,7 +138,9 @@ export function AddModal({ kind, onClose }: { kind: ModalKind; onClose: () => vo
     thing: createThingAction,
     book: createBookAction,
     sound: createSoundAction,
+    podcast: createPodcastAction,
     post: createPostAction,
+    movie: createMovieAction,
     work: createWorkAction,
   };
   const today = todayKey();
@@ -210,12 +216,34 @@ export function AddModal({ kind, onClose }: { kind: ModalKind; onClose: () => vo
               <FileField name="image" label="ジャケット画像を選択" />
             </>
           )}
+          {kind === "podcast" && (
+            <>
+              <input name="title" required placeholder="エピソード名（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <input name="artist" placeholder="番組・ホスト" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <input name="url" type="url" placeholder="リンク" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <FileField name="image" label="カバー画像を選択" />
+            </>
+          )}
           {kind === "post" && (
             <>
               <textarea
                 name="body"
                 required
                 placeholder="いまなにしてる？"
+                rows={5}
+                className="w-full min-w-0 resize-y rounded-xl bg-[#E8DFD0] px-3 py-3 text-base leading-relaxed"
+              />
+              <input name="entry_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <FileField name="photos" label="写真を選択（複数可）" multiple />
+            </>
+          )}
+          {kind === "movie" && (
+            <>
+              <textarea
+                name="body"
+                required
+                placeholder="何を観た？"
                 rows={5}
                 className="w-full min-w-0 resize-y rounded-xl bg-[#E8DFD0] px-3 py-3 text-base leading-relaxed"
               />

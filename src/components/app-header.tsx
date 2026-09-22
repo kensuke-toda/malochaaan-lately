@@ -10,7 +10,7 @@ export function AppHeader({ loggedIn }: { loggedIn: boolean }) {
   const pathname = usePathname();
   const { openAdd } = useAddFlow();
   const meHref = loggedIn ? "/admin" : "/login";
-  const homeActive = pathname === "/" || pathname.startsWith("/places") || pathname.startsWith("/things") || pathname.startsWith("/books") || pathname.startsWith("/sounds") || pathname.startsWith("/posts") || pathname.startsWith("/works");
+  const homeActive = pathname === "/" || pathname.startsWith("/places") || pathname.startsWith("/things") || pathname.startsWith("/books") || pathname.startsWith("/sounds") || pathname.startsWith("/podcasts") || pathname.startsWith("/posts") || pathname.startsWith("/movies") || pathname.startsWith("/works");
   const meActive = pathname.startsWith("/admin") || pathname.startsWith("/login");
 
   return (
