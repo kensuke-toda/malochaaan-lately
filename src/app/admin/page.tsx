@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+import { formatDate, postPreview } from "@/lib/utils";
 import {
   deleteBookAction,
   deletePlaceAction,
@@ -88,7 +88,7 @@ export default async function AdminPage() {
         title="Posts"
         rows={data.posts.map((p) => ({
           id: p.id,
-          label: `${formatDate(p.entry_date)} ・ ${p.title}`,
+          label: `${formatDate(p.entry_date)} ・ ${postPreview(p, 48)}`,
           mine: p.created_by === user.id,
         }))}
         action={deletePostAction}

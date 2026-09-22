@@ -76,8 +76,7 @@ create table if not exists things (
 -- =========================================
 create table if not exists posts (
   id uuid primary key default gen_random_uuid(),
-  title text not null,
-  body text,
+  body text not null,
   entry_date date not null default current_date,
   created_by uuid not null references public.profiles(id),
   created_at timestamptz not null default now()

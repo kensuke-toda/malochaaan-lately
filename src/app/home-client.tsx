@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Children, useMemo, useState, type ReactNode } from "react";
 import { useAddFlow } from "@/components/add-flow";
 import type { HomeData } from "@/lib/data";
-import { authorName, formatDate, toDateKey, todayKey, tokyoNow } from "@/lib/utils";
+import { authorName, formatDate, postPreview, postText, toDateKey, todayKey, tokyoNow } from "@/lib/utils";
 
 type HighlightItem = { href: string; label: string };
 
@@ -73,7 +73,7 @@ export function HomeClient({
       things: inMonth(data.things, "thing", (r) => `/things/${r.id}`, (r) => r.name),
       books: inMonth(data.books, "book", (r) => `/books/${r.id}`, (r) => r.title),
       sounds: inMonth(data.sounds, "sound", (r) => `/sounds/${r.id}`, (r) => r.title),
-      posts: inMonth(data.posts, "post", (r) => `/posts/${r.id}`, (r) => r.title),
+      posts: inMonth(data.posts, "post", (r) => `/posts/${r.id}`, (r) => postPreview(r)),
       works: inMonth(data.works, "work", (r) => `/works/${r.id}`, (r) => r.title),
     };
   }, [data, monthPrefix]);
@@ -320,17 +320,32 @@ export function HomeClient({
         <SectionHead title="Posts" loggedIn={loggedIn} onAdd={() => openAdd("post")} />
         {data.posts.length ? (
           <ul className="flex flex-col gap-4">
-            {data.posts.map((post) => (
-              <li key={post.id} className="rounded-xl bg-[#F4EEE4] p-4 ring-1 ring-[#2F2A24]/5">
-                <Link href={`/posts/${post.id}`} className="block">
-                  <p className="text-xs text-[#6B6258]">
-                    {authorName(post)} ・ {formatDate(post.entry_date)}
-                  </p>
-                  <p className="mt-1 font-display font-semibold">{post.title}</p>
-                  {post.body && <p className="mt-1 line-clamp-2 text-sm text-[#6B6258]">{post.body}</p>}
-                </Link>
-              </li>
-            ))}
+            {data.posts.map((post) => {
+              const photos = [...(post.post_photos ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+              return (
+                <li key={post.id} className="rounded-xl bg-[#F4EEE4] p-4 ring-1 ring-[#2F2A24]/5">
+                  <Link href={`/posts/${post.id}`} className="block">
+                    <p className="text-xs text-[#6B6258]">
+                      {authorName(post)} ・ {formatDate(post.entry_date)}
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{postText(post)}</p>
+                    {photos.length > 0 && (
+                      <div className={`mt-3 grid gap-2 ${photos.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                        {photos.slice(0, 4).map((photo) => (
+                          <div
+                            key={photo.id}
+                            className={`relative overflow-hidden rounded-xl bg-[#E8DFD0] ${photos.length === 1 ? "aspect-[4/3]" : "aspect-square"}`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={photo.image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <p className="text-sm text-[#6B6258]">まだありません。</p>
@@ -493,7 +508,7 @@ function DayList({
     ...bundle.things.map((p) => ({ href: `/things/${p.id}`, label: `モノ：${p.name}` })),
     ...bundle.books.map((p) => ({ href: `/books/${p.id}`, label: `読んだ本：${p.title}` })),
     ...bundle.sounds.map((p) => ({ href: `/sounds/${p.id}`, label: `聴いた音楽：${p.title}` })),
-    ...bundle.posts.map((p) => ({ href: `/posts/${p.id}`, label: `投稿：${p.title}` })),
+    ...bundle.posts.map((p) => ({ href: `/posts/${p.id}`, label: `投稿：${postPreview(p)}` })),
     ...bundle.works.map((p) => ({ href: `/works/${p.id}`, label: `仕事：${p.title}` })),
   ];
   if (!rows.length) return null;

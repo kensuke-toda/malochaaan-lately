@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { authorName, formatDate } from "@/lib/utils";
+import { authorName, formatDate, postText } from "@/lib/utils";
 import type { Post } from "@/types";
 
 export const revalidate = 0;
@@ -27,8 +27,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
       <p className="mt-6 text-sm text-[#6B6258]">
         {authorName(post)} ・ {formatDate(post.entry_date)}
       </p>
-      <h1 className="mt-1 font-display text-2xl font-semibold break-words">{post.title}</h1>
-      {post.body && <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-[#3D362E]">{post.body}</p>}
+      <p className="mt-3 whitespace-pre-wrap text-base leading-relaxed break-words">{postText(post)}</p>
       {photos.length > 0 && (
         <div className="mt-6 grid grid-cols-2 gap-3">
           {photos.map((photo) => (

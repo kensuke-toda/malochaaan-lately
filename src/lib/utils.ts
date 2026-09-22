@@ -39,3 +39,15 @@ export function todayKey() {
 export function authorName(row: { profiles?: { display_name: string } | null }) {
   return row.profiles?.display_name ?? "メンバー";
 }
+
+export function postText(post: { body?: string | null; title?: string | null }) {
+  const body = (post.body ?? "").trim();
+  if (body) return body;
+  return (post.title ?? "").trim();
+}
+
+export function postPreview(post: { body?: string | null; title?: string | null }, max = 40) {
+  const text = postText(post).replace(/\s+/g, " ");
+  if (!text) return "投稿";
+  return text.length > max ? `${text.slice(0, max)}…` : text;
+}

@@ -61,8 +61,8 @@ export type PostPhoto = {
 
 export type Post = {
   id: string;
-  title: string;
-  body: string | null;
+  body: string;
+  title?: string | null;
   entry_date: string;
   created_by: string;
   created_at: string;
