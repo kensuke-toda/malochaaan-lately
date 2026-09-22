@@ -3,6 +3,7 @@ import { Fraunces, Nunito_Sans } from "next/font/google";
 import { AddFlowProvider } from "@/components/add-flow";
 import { AppFrame } from "@/components/app-frame";
 import { BootSplash } from "@/components/boot-splash";
+import { FeedScopeProvider } from "@/components/feed-scope";
 import { getSessionUser } from "@/lib/auth";
 import "./globals.css";
 
@@ -45,7 +46,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full w-full bg-[#E8DFD0] text-[#2F2A24]">
         <BootSplash />
         <AddFlowProvider loggedIn={Boolean(user)}>
-          <AppFrame loggedIn={Boolean(user)}>{children}</AppFrame>
+          <FeedScopeProvider loggedIn={Boolean(user)}>
+            <AppFrame loggedIn={Boolean(user)}>{children}</AppFrame>
+          </FeedScopeProvider>
         </AddFlowProvider>
       </body>
     </html>

@@ -1,13 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Children, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Children, useMemo, useState, type ReactNode } from "react";
 import { useAddFlow } from "@/components/add-flow";
+import { useFeedScope } from "@/components/feed-scope";
 import type { HomeData } from "@/lib/data";
 import { authorName, formatDate, postPreview, postText, toDateKey, todayKey, tokyoNow } from "@/lib/utils";
-
-const FEED_SCOPE_KEY = "lately.feedScope";
-type FeedScope = "mine" | "everyone";
 
 function itemDate(kind: string, row: { visited_date?: string; entry_date?: string; created_at: string }) {
   if (kind === "place") return toDateKey(row.visited_date ?? row.created_at);
@@ -47,19 +45,8 @@ export function HomeClient({
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() });
   const [selectedDay, setSelectedDay] = useState<number | null>(now.getDate());
   const [photo, setPhoto] = useState<{ day: number; index: number } | null>(null);
-  const [scope, setScope] = useState<FeedScope>(loggedIn && mine ? "mine" : "everyone");
+  const { scope } = useFeedScope();
   const { openAdd } = useAddFlow();
-
-  useEffect(() => {
-    if (!loggedIn || !mine) return;
-    const saved = window.localStorage.getItem(FEED_SCOPE_KEY);
-    if (saved === "mine" || saved === "everyone") setScope(saved);
-  }, [loggedIn, mine]);
-
-  function changeScope(next: FeedScope) {
-    setScope(next);
-    window.localStorage.setItem(FEED_SCOPE_KEY, next);
-  }
 
   const data = loggedIn && mine && scope === "mine" ? mine : everyone;
 
@@ -115,8 +102,6 @@ export function HomeClient({
         {displayName ? <p className="text-xs text-[#6B6258]">{displayName} としてログイン中</p> : null}
         <p className={`text-xs text-[#6B6258]/70${displayName ? " mt-1" : ""}`}>更新日：{formatDate(todayKey())}</p>
       </header>
-
-      {loggedIn && mine ? <FeedScopeBar scope={scope} onChange={changeScope} /> : null}
 
       {!configured && (
         <div className="mb-8 rounded-xl bg-[#F4EEE4] px-4 py-3 text-sm text-[#6B6258]">
@@ -464,44 +449,6 @@ function CardScroller({ children, full }: { children: ReactNode; full?: boolean 
           {child}
         </div>
       ))}
-    </div>
-  );
-}
-
-function FeedScopeBar({
-  scope,
-  onChange,
-}: {
-  scope: FeedScope;
-  onChange: (scope: FeedScope) => void;
-}) {
-  const options: { id: FeedScope; label: string }[] = [
-    { id: "mine", label: "自分の投稿だけ" },
-    { id: "everyone", label: "みんなの投稿も表示" },
-  ];
-  return (
-    <div
-      className="mb-8 grid grid-cols-2 rounded-full bg-[#F4EEE4] p-1 text-xs sm:text-sm"
-      role="radiogroup"
-      aria-label="表示する投稿"
-    >
-      {options.map((option) => {
-        const on = scope === option.id;
-        return (
-          <button
-            key={option.id}
-            type="button"
-            role="radio"
-            aria-checked={on}
-            onClick={() => onChange(option.id)}
-            className={`min-h-11 rounded-full px-2 py-2 font-medium sm:px-3 ${
-              on ? "bg-[#2F2A24] text-[#F4EEE4]" : "text-[#6B6258]"
-            }`}
-          >
-            {option.label}
-          </button>
-        );
-      })}
     </div>
   );
 }

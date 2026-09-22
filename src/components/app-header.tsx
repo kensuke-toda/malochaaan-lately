@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { House, Plus, UserRound } from "lucide-react";
 import { useAddFlow } from "@/components/add-flow";
 import { BrandLockup } from "@/components/brand-mark";
+import { FeedScopeBar } from "@/components/feed-scope";
 import { cn } from "@/lib/utils";
 
 export function AppHeader({ loggedIn }: { loggedIn: boolean }) {
@@ -13,6 +14,7 @@ export function AppHeader({ loggedIn }: { loggedIn: boolean }) {
   const meHref = loggedIn ? "/admin" : "/login";
   const homeActive = pathname === "/" || pathname.startsWith("/places") || pathname.startsWith("/things") || pathname.startsWith("/books") || pathname.startsWith("/sounds") || pathname.startsWith("/podcasts") || pathname.startsWith("/posts") || pathname.startsWith("/movies") || pathname.startsWith("/works");
   const meActive = pathname.startsWith("/admin") || pathname.startsWith("/login");
+  const showFeedScope = loggedIn && pathname === "/";
 
   return (
     <header className="glass-surface sticky top-0 z-40 border-b border-[#2F2A24]/10 pt-[env(safe-area-inset-top)]">
@@ -53,6 +55,11 @@ export function AppHeader({ loggedIn }: { loggedIn: boolean }) {
           </Link>
         </nav>
       </div>
+      {showFeedScope ? (
+        <div className="mx-auto w-full max-w-3xl px-4 pb-3">
+          <FeedScopeBar />
+        </div>
+      ) : null}
     </header>
   );
 }
