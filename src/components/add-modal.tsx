@@ -8,7 +8,9 @@ import {
   createSoundAction,
   createThingAction,
   createWorkAction,
+  type BookLookupResult,
 } from "@/app/actions";
+import { BookIsbnLookup } from "@/components/book-isbn-lookup";
 import { todayKey } from "@/lib/utils";
 
 export type ModalKind = "place" | "thing" | "book" | "sound" | "post" | "work";
@@ -34,6 +36,63 @@ async function compressImage(file: File): Promise<File> {
   } catch {
     return file;
   }
+}
+
+function BookFields({ disabled }: { disabled: boolean }) {
+  const [title, setTitle] = useState("");
+  const [author, setAuthor] = useState("");
+  const [coverUrl, setCoverUrl] = useState("");
+
+  function applyLookup(book: BookLookupResult) {
+    setTitle(book.title);
+    setAuthor(book.author);
+    setCoverUrl(book.coverUrl ?? "");
+  }
+
+  return (
+    <>
+      <BookIsbnLookup disabled={disabled} onFound={applyLookup} />
+      <input
+        name="title"
+        required
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="書名（必須）"
+        className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm"
+      />
+      <input
+        name="author"
+        value={author}
+        onChange={(e) => setAuthor(e.target.value)}
+        placeholder="著者"
+        className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm"
+      />
+      <input type="hidden" name="cover_url" value={coverUrl} />
+      {coverUrl ? (
+        <div className="flex items-center gap-3 rounded-xl bg-[#E8DFD0] p-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={coverUrl} alt="" className="h-20 w-14 shrink-0 rounded-md object-cover" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-[#6B6258]">openBDの書影を使います。下で写真を選ぶと差し替えます。</p>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => setCoverUrl("")}
+              className="mt-2 min-h-11 text-sm text-[#B85C38]"
+            >
+              書影を外す
+            </button>
+          </div>
+        </div>
+      ) : null}
+      <select name="status" defaultValue="finished" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm">
+        <option value="finished">読了</option>
+        <option value="reading">読書中</option>
+      </select>
+      <textarea name="memo" placeholder="感想・メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
+      <FileField name="image" label={coverUrl ? "カバー画像を選び直す" : "カバー画像を選択"} />
+    </>
+  );
 }
 
 function FileField({ name, label, multiple }: { name: string; label: string; multiple?: boolean }) {
@@ -116,7 +175,7 @@ export function AddModal({ kind, onClose }: { kind: ModalKind; onClose: () => vo
         if (e.target === e.currentTarget && !pending) onClose();
       }}
     >
-      <div className="max-h-[min(92dvh,40rem)] w-full max-w-md overflow-y-auto rounded-t-2xl bg-[#F4EEE4] p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:rounded-2xl sm:pb-6">
+      <div className="max-h-[min(92dvh,46rem)] w-full max-w-md overflow-y-auto rounded-t-2xl bg-[#F4EEE4] p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:rounded-2xl sm:pb-6">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-display text-lg font-semibold">{titles[kind]}</h3>
           <button type="button" onClick={onClose} disabled={pending} className="min-h-11 min-w-11 text-[#6B6258]">
@@ -141,18 +200,7 @@ export function AddModal({ kind, onClose }: { kind: ModalKind; onClose: () => vo
               <FileField name="image" label="写真を選択" />
             </>
           )}
-          {kind === "book" && (
-            <>
-              <input name="title" required placeholder="書名（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="author" placeholder="著者" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <select name="status" defaultValue="finished" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm">
-                <option value="finished">読了</option>
-                <option value="reading">読書中</option>
-              </select>
-              <textarea name="memo" placeholder="感想・メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <FileField name="image" label="カバー画像を選択" />
-            </>
-          )}
+          {kind === "book" && <BookFields disabled={pending} />}
           {kind === "sound" && (
             <>
               <input name="title" required placeholder="曲名（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
@@ -164,9 +212,14 @@ export function AddModal({ kind, onClose }: { kind: ModalKind; onClose: () => vo
           )}
           {kind === "post" && (
             <>
+              <textarea
+                name="body"
+                required
+                placeholder="いまなにしてる？"
+                rows={5}
+                className="w-full min-w-0 resize-y rounded-xl bg-[#E8DFD0] px-3 py-3 text-sm leading-relaxed"
+              />
               <input name="entry_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <input name="title" required placeholder="タイトル（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
-              <textarea name="body" placeholder="本文" rows={4} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2 text-sm" />
               <FileField name="photos" label="写真を選択（複数可）" multiple />
             </>
           )}

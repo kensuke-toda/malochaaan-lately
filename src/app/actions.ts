@@ -4,7 +4,15 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
+import { fetchOpenBdBook, isAllowedCoverUrl } from "@/lib/books/openbd";
+import { isBookIsbn, normalizeIsbn } from "@/lib/books/isbn";
 import { createUserClient } from "@/lib/supabase/server";
+
+export type BookLookupResult = {
+  title: string;
+  author: string;
+  coverUrl: string | null;
+};
 
 async function requireUser() {
   const user = await getSessionUser();
@@ -84,17 +92,57 @@ export async function createPlaceAction(formData: FormData) {
   revalidateAll();
 }
 
+async function uploadCoverFromUrl(coverUrl: string) {
+  if (!isAllowedCoverUrl(coverUrl)) {
+    throw new Error("書影URLが不正です");
+  }
+  const res = await fetch(coverUrl, { redirect: "error", cache: "no-store" });
+  if (!res.ok) throw new Error("書影の取得に失敗しました");
+  const contentType = (res.headers.get("content-type") ?? "").split(";")[0].trim();
+  if (!contentType.startsWith("image/")) throw new Error("書影の取得に失敗しました");
+  const bytes = Buffer.from(await res.arrayBuffer());
+  if (bytes.byteLength === 0 || bytes.byteLength > 5 * 1024 * 1024) {
+    throw new Error("書影の取得に失敗しました");
+  }
+  const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+  const file = new File([new Uint8Array(bytes)], `cover.${ext}`, { type: contentType || "image/jpeg" });
+  return uploadImage("books-images", file);
+}
+
+export async function lookupBookByIsbnAction(rawIsbn: string): Promise<{ book?: BookLookupResult; error?: string }> {
+  const user = await getSessionUser();
+  if (!user) return { error: "ログインが必要です" };
+  const isbn = normalizeIsbn(rawIsbn);
+  if (!isbn || !isBookIsbn(isbn)) {
+    return { error: "ISBNの形式が正しくありません。978/979で始まる本のISBNを入力してください。" };
+  }
+  try {
+    const book = await fetchOpenBdBook(isbn);
+    if (!book) return { error: "書誌情報が見つかりませんでした。手入力してください。" };
+    return { book };
+  } catch {
+    return { error: "書誌情報の取得に失敗しました" };
+  }
+}
+
 export async function createBookAction(formData: FormData) {
   const user = await requireUser();
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { error: "書名は必須です" };
   const image = formData.get("image");
+  const coverUrl = String(formData.get("cover_url") ?? "").trim();
   let imageUrl: string | null = null;
   if (image instanceof File && image.size > 0) {
     try {
       imageUrl = await uploadImage("books-images", image);
     } catch (e) {
       return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
+    }
+  } else if (coverUrl) {
+    try {
+      imageUrl = await uploadCoverFromUrl(coverUrl);
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "書影の取得に失敗しました" };
     }
   }
   const status = String(formData.get("status") ?? "finished");
@@ -139,19 +187,18 @@ export async function createSoundAction(formData: FormData) {
 
 export async function createPostAction(formData: FormData) {
   const user = await requireUser();
-  const title = String(formData.get("title") ?? "").trim();
-  if (!title) return { error: "タイトルは必須です" };
+  const body = String(formData.get("body") ?? "").trim();
+  if (!body) return { error: "本文は必須です" };
   const supabase = await createUserClient();
-  const { data: post, error } = await supabase
-    .from("posts")
-    .insert({
-      title,
-      body: String(formData.get("body") ?? "").trim() || null,
-      entry_date: String(formData.get("entry_date") ?? "") || null,
-      created_by: user.id,
-    })
-    .select()
-    .single();
+  const row = {
+    body,
+    entry_date: String(formData.get("entry_date") ?? "") || null,
+    created_by: user.id,
+  };
+  let { data: post, error } = await supabase.from("posts").insert(row).select().single();
+  if (error?.message?.toLowerCase().includes("title")) {
+    ({ data: post, error } = await supabase.from("posts").insert({ ...row, title: body }).select().single());
+  }
   if (error || !post) return { error: `保存に失敗しました: ${error?.message}` };
 
   const photos = formData
