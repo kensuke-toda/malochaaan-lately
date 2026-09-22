@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { House, Plus, UserRound } from "lucide-react";
 import { useAddFlow } from "@/components/add-flow";
+import { BrandLockup } from "@/components/brand-mark";
 import { cn } from "@/lib/utils";
 
 export function AppHeader({ loggedIn }: { loggedIn: boolean }) {
@@ -16,8 +17,8 @@ export function AppHeader({ loggedIn }: { loggedIn: boolean }) {
   return (
     <header className="glass-surface sticky top-0 z-40 border-b border-[#2F2A24]/10 pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-4 py-3">
-        <Link href="/" className="font-display text-xl font-semibold">
-          Lately
+        <Link href="/" className="inline-flex min-h-11 items-center">
+          <BrandLockup textClassName="text-xl" />
         </Link>
         <nav className="hidden items-center gap-1 rounded-full bg-[#E8DFD0] p-1 sm:flex">
           <Link

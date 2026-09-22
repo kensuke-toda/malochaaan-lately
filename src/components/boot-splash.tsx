@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BrandMark } from "@/components/brand-mark";
 
 export function BootSplash() {
   const [hidden, setHidden] = useState(false);
@@ -17,9 +18,7 @@ export function BootSplash() {
         hidden ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
     >
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#F4EEE4] font-display text-3xl font-semibold text-[#B85C38] shadow-sm">
-        L
-      </div>
+      <BrandMark size={64} />
     </div>
   );
 }

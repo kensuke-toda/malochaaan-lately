@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandLockup } from "@/components/brand-mark";
 import { loginAction } from "./actions";
 
 export default async function LoginPage({
@@ -9,7 +10,9 @@ export default async function LoginPage({
   const { error } = await searchParams;
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-sm flex-col justify-center px-4">
-      <h1 className="mb-1 font-display text-2xl font-semibold">Lately</h1>
+      <h1 className="mb-1">
+        <BrandLockup markSize={36} textClassName="text-2xl" />
+      </h1>
       <p className="mb-6 text-sm text-[#6B6258]">アカウントでログインしてください</p>
       <form action={loginAction} className="flex flex-col gap-3 rounded-2xl bg-[#F4EEE4] p-5">
         <input

@@ -1,5 +1,5 @@
--- Lately Phase 1 schema
--- Supabase SQL Editor で実行する。方針変更3（6セクション + Auth + RLS）反映済み。
+-- Lately schema
+-- Supabase SQL Editor で実行する。Places / Things / Books / Sounds / Podcast / Posts / Movie / Works + Auth + RLS。
 
 create extension if not exists "pgcrypto";
 

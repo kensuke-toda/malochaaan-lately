@@ -1,5 +1,16 @@
 -- Podcast（Sounds相当）と Movie（Posts相当）を追加する。既存DB向け。
 -- Supabase SQL Editor で実行する。新規セットアップは schema.sql を使う。
+-- 途中で失敗した場合も、このファイルを再実行してよい。
+
+create or replace function public.set_created_by()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.created_by := auth.uid();
+  return new;
+end;
+$$;
 
 create table if not exists podcasts (
   id uuid primary key default gen_random_uuid(),
