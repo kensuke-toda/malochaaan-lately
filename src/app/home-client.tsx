@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Children, useMemo, useState, type ReactNode } from "react";
 import { useAddFlow } from "@/components/add-flow";
 import type { HomeData } from "@/lib/data";
 import { authorName, formatDate, toDateKey, todayKey, tokyoNow } from "@/lib/utils";
@@ -110,9 +110,8 @@ export function HomeClient({
   return (
     <div className="w-full">
       <header className="mb-8">
-        <p className="text-sm text-[#6B6258]">Ken とパートナーの近況。行った場所と、好きなもの。</p>
-        {displayName ? <p className="mt-1 text-xs text-[#6B6258]">{displayName} としてログイン中</p> : null}
-        <p className="mt-1 text-xs text-[#6B6258]/70">更新日：{formatDate(todayKey())}</p>
+        {displayName ? <p className="text-xs text-[#6B6258]">{displayName} としてログイン中</p> : null}
+        <p className={`text-xs text-[#6B6258]/70${displayName ? " mt-1" : ""}`}>更新日：{formatDate(todayKey())}</p>
       </header>
 
       {!configured && (
@@ -122,19 +121,16 @@ export function HomeClient({
       )}
 
       <section className="mb-10 text-sm leading-relaxed text-[#3D362E]">
-        <p>2人で暮らしている記録です。久しぶりに会う人に「最近何してる？」と聞かれたときに、すぐ思い出せるようにしています。</p>
+        <p className="font-medium">日々の記録</p>
         {hasHighlights && (
-          <>
-            <p className="mt-4 font-medium">最近のあれこれ</p>
-            <div className="mt-2 divide-y divide-[#2F2A24]/10 rounded-xl bg-[#F4EEE4] px-3">
-              <Highlight details="行った場所" items={highlights.places} />
-              <Highlight details="モノ" items={highlights.things} />
-              <Highlight details="読んだ本" items={highlights.books} />
-              <Highlight details="聴いた音楽" items={highlights.sounds} />
-              <Highlight details="投稿" items={highlights.posts} />
-              <Highlight details="仕事" items={highlights.works} />
-            </div>
-          </>
+          <div className="mt-2 divide-y divide-[#2F2A24]/10 rounded-xl bg-[#F4EEE4] px-3">
+            <Highlight details="行った場所" items={highlights.places} />
+            <Highlight details="モノ" items={highlights.things} />
+            <Highlight details="読んだ本" items={highlights.books} />
+            <Highlight details="聴いた音楽" items={highlights.sounds} />
+            <Highlight details="投稿" items={highlights.posts} />
+            <Highlight details="仕事" items={highlights.works} />
+          </div>
         )}
       </section>
 
@@ -247,9 +243,9 @@ export function HomeClient({
       <section id="things" className="mb-16">
         <SectionHead title="Things" loggedIn={loggedIn} onAdd={() => openAdd("thing")} />
         {data.things.length ? (
-          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
+          <CardScroller>
             {data.things.map((thing) => (
-              <Link key={thing.id} href={`/things/${thing.id}`} className="group min-w-0">
+              <Link key={thing.id} href={`/things/${thing.id}`} className="group block min-w-0">
                 <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
                   {(thing.processed_image_url || thing.original_image_url) && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -267,7 +263,7 @@ export function HomeClient({
                 <p className="text-sm">{thing.name}</p>
               </Link>
             ))}
-          </div>
+          </CardScroller>
         ) : (
           <p className="text-sm text-[#6B6258]">まだありません。</p>
         )}
@@ -276,9 +272,9 @@ export function HomeClient({
       <section id="books" className="mb-16">
         <SectionHead title="Books" loggedIn={loggedIn} onAdd={() => openAdd("book")} />
         {data.books.length ? (
-          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
+          <CardScroller>
             {data.books.map((book) => (
-              <Link key={book.id} href={`/books/${book.id}`} className="group min-w-0">
+              <Link key={book.id} href={`/books/${book.id}`} className="group block min-w-0">
                 <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
                   {book.image_url && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -292,7 +288,7 @@ export function HomeClient({
                 {book.author && <p className="text-xs text-[#6B6258]">{book.author}</p>}
               </Link>
             ))}
-          </div>
+          </CardScroller>
         ) : (
           <p className="text-sm text-[#6B6258]">まだありません。</p>
         )}
@@ -301,9 +297,9 @@ export function HomeClient({
       <section id="sounds" className="mb-16">
         <SectionHead title="Sounds" loggedIn={loggedIn} onAdd={() => openAdd("sound")} />
         {data.sounds.length ? (
-          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
+          <CardScroller>
             {data.sounds.map((sound) => (
-              <Link key={sound.id} href={`/sounds/${sound.id}`} className="min-w-0">
+              <Link key={sound.id} href={`/sounds/${sound.id}`} className="block min-w-0">
                 <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
                   {sound.image_url && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -314,7 +310,7 @@ export function HomeClient({
                 {sound.artist && <p className="text-xs text-[#6B6258]">{sound.artist}</p>}
               </Link>
             ))}
-          </div>
+          </CardScroller>
         ) : (
           <p className="text-sm text-[#6B6258]">まだありません。</p>
         )}
@@ -413,6 +409,16 @@ export function HomeClient({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function CardScroller({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin]">
+      {Children.map(children, (child) => (
+        <div className="w-[calc((100%-1.25rem)/2)] shrink-0 snap-start sm:w-[calc((100%-2.5rem)/3)]">{child}</div>
+      ))}
     </div>
   );
 }

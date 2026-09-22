@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Lately",
     short_name: "Lately",
-    description: "Ken とパートナーの近況。行った場所と、好きなもの。",
+    description: "日々の記録",
     start_url: "/",
     scope: "/",
     display: "standalone",

@@ -18,7 +18,7 @@ const nunito = Nunito_Sans({
 
 export const metadata: Metadata = {
   title: "Lately",
-  description: "Ken とパートナーの近況。行った場所と、好きなもの。",
+  description: "日々の記録",
   applicationName: "Lately",
   appleWebApp: {
     capable: true,
