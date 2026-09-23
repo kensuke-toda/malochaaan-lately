@@ -24,8 +24,9 @@ export function isWantRow(row: {
   memo?: string | null;
   body?: string | null;
   summary?: string | null;
+  title?: string | null;
 }): boolean {
   if (row.intent === "want") return true;
   if (isWantDate(row.visited_date) || isWantDate(row.entry_date)) return true;
-  return `${row.memo ?? ""}${row.body ?? ""}${row.summary ?? ""}`.includes(WANT_MARK);
+  return `${row.memo ?? ""}${row.body ?? ""}${row.summary ?? ""}${row.title ?? ""}`.includes(WANT_MARK);
 }

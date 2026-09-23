@@ -60,16 +60,17 @@ export const emptyHomeData: HomeData = {
   profiles: [],
 };
 
-function revealWant<T extends { memo?: string | null; body?: string | null; summary?: string | null }>(row: T): T {
+function revealWant<T extends { memo?: string | null; body?: string | null; summary?: string | null; title?: string | null }>(row: T): T {
   return {
     ...row,
     ...(row.memo != null ? { memo: stripWantMark(row.memo) || null } : {}),
     ...(row.body != null ? { body: stripWantMark(row.body) || null } : {}),
     ...(row.summary != null ? { summary: stripWantMark(row.summary) || null } : {}),
+    ...(row.title != null ? { title: stripWantMark(row.title) } : {}),
   };
 }
 
-function byIntent<T extends { intent?: Intent; visited_date?: string | null; entry_date?: string | null; memo?: string | null; body?: string | null; summary?: string | null }>(
+function byIntent<T extends { intent?: Intent; visited_date?: string | null; entry_date?: string | null; memo?: string | null; body?: string | null; summary?: string | null; title?: string | null }>(
   rows: T[] | null,
   intent?: Intent,
 ) {

@@ -31,9 +31,9 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
       </p>
       <p className="mt-3 whitespace-pre-wrap text-base leading-relaxed break-words">{postText(post)}</p>
       {photos.length > 0 && (
-        <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className="mt-6 flex flex-col gap-3">
           {photos.map((photo) => (
-            <div key={photo.id} className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
+            <div key={photo.id} className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={photo.image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
             </div>

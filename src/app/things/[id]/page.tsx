@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isWantRow, stripWantMark } from "@/lib/intent";
 import { authorName } from "@/lib/utils";
 import type { Thing } from "@/types";
 
@@ -17,7 +18,7 @@ export default async function ThingDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="mx-auto w-full max-w-xl py-2">
-      <Link href="/#things" className="inline-block text-sm text-[#6B6258]">
+      <Link href={isWantRow(thing) ? "/soon#things" : "/#things"} className="inline-block text-sm text-[#6B6258]">
         ← 戻る
       </Link>
       <div className="relative mt-6 aspect-square w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
@@ -30,8 +31,8 @@ export default async function ThingDetailPage({ params }: { params: Promise<{ id
         <p className="text-xs text-[#6B6258]">{authorName(thing)}が投稿</p>
         {thing.brand ? <p className="mt-2 text-sm text-[#6B6258]">{thing.brand}</p> : null}
         <h1 className="mt-1 font-display text-2xl font-semibold break-words">{thing.name}</h1>
-        {thing.memo ? (
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-[#3D362E]">{thing.memo}</p>
+        {stripWantMark(thing.memo) ? (
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-[#3D362E]">{stripWantMark(thing.memo)}</p>
         ) : null}
         {thing.product_url ? (
           <a

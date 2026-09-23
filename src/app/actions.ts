@@ -45,7 +45,7 @@ async function insertContent(
 
   let payload = { ...row };
   let result = await run(payload);
-  for (let i = 0; i < 4 && result.error; i++) {
+  for (let i = 0; i < 6 && result.error; i++) {
     const err = result.error;
     if (missingColumn(err, "intent") && "intent" in payload) {
       const { intent: _intent, ...rest } = payload;
@@ -55,6 +55,12 @@ async function insertContent(
     }
     if (table === "posts" && err.message.toLowerCase().includes("title")) {
       payload = { ...payload, title: payload.body };
+      result = await run(payload);
+      continue;
+    }
+    if (table === "movies" && missingColumn(err, "title") && "title" in payload) {
+      const { title, ...rest } = payload;
+      payload = { ...rest, body: rest.body || title };
       result = await run(payload);
       continue;
     }
@@ -94,15 +100,20 @@ async function uploadImage(bucket: string, file: File) {
   const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
   const path = `${randomUUID()}.${ext}`;
   const bytes = Buffer.from(await file.arrayBuffer());
-  const { error } = await supabase.storage.from(bucket).upload(path, bytes, {
-    contentType: file.type || "image/jpeg",
-    upsert: false,
-  });
-  if (error) {
-    throw new Error(`画像のアップロードに失敗しました: ${error.message}`);
+  const buckets = bucket === "things-images" ? [bucket] : [bucket, "things-images"];
+  let lastError: string | null = null;
+  for (const current of buckets) {
+    const { error } = await supabase.storage.from(current).upload(path, bytes, {
+      contentType: file.type || "image/jpeg",
+      upsert: false,
+    });
+    if (!error) {
+      const { data } = supabase.storage.from(current).getPublicUrl(path);
+      return data.publicUrl;
+    }
+    lastError = error.message;
   }
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
+  throw new Error(`画像のアップロードに失敗しました: ${lastError}`);
 }
 
 function revalidateAll() {
@@ -268,14 +279,15 @@ export async function createPodcastAction(formData: FormData) {
       return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
     }
   }
+  const intent = parseIntent(formData);
   const supabase = await createUserClient();
   const { error } = await insertContent(supabase, "podcasts", {
-    title,
+    title: markWantText(title, intent === "want") ?? title,
     artist: String(formData.get("artist") ?? "").trim() || null,
     url: String(formData.get("url") ?? "").trim() || null,
-    memo: markWantText(String(formData.get("memo") ?? "").trim() || null, parseIntent(formData) === "want"),
+    memo: markWantText(String(formData.get("memo") ?? "").trim() || null, intent === "want"),
     image_url: imageUrl,
-    intent: parseIntent(formData),
+    intent,
     created_by: user.id,
   });
   if (error) return { error: `保存に失敗しました: ${error.message}` };
@@ -337,10 +349,10 @@ export async function createMovieAction(formData: FormData) {
   const intent = parseIntent(formData);
   const supabase = await createUserClient();
   const { error } = await insertContent(supabase, "movies", {
-    title,
+    title: markWantText(title, intent === "want") ?? title,
     body: markWantText(String(formData.get("body") ?? "").trim() || null, intent === "want"),
     image_url: imageUrl,
-    entry_date: intent === "want" ? WANT_DATE : todayKey(),
+    ...(intent === "want" ? {} : { entry_date: todayKey() }),
     intent,
     created_by: user.id,
   });
@@ -486,19 +498,28 @@ export async function recordHappenedAction(formData: FormData) {
   if (table === "posts" || table === "movies") extra.entry_date = todayKey();
 
   const supabase = await createUserClient();
-  const { data: current } = await supabase.from(table).select("memo, body, summary").eq("id", id).maybeSingle();
+  let { data: current } = await supabase.from(table).select("memo, body, summary, title").eq("id", id).maybeSingle();
+  if (!current) {
+    ({ data: current } = await supabase.from(table).select("memo, body, summary").eq("id", id).maybeSingle());
+  }
   if (current && "memo" in current && current.memo != null) extra.memo = stripWantMark(String(current.memo)) || null;
   if (current && "body" in current && current.body != null) extra.body = stripWantMark(String(current.body)) || null;
   if (current && "summary" in current && current.summary != null) extra.summary = stripWantMark(String(current.summary)) || null;
+  if (current && "title" in current && current.title != null) extra.title = stripWantMark(String(current.title));
 
   let { error } = await supabase.from(table).update(extra).eq("id", id).eq("created_by", user.id);
-  if (missingColumn(error, "intent") && "intent" in extra) {
-    const { intent: _intent, ...rest } = extra;
-    if (Object.keys(rest).length) {
-      ({ error } = await supabase.from(table).update(rest).eq("id", id).eq("created_by", user.id));
-    } else {
-      error = null;
+  for (let i = 0; i < 4 && error; i++) {
+    const unknown = error.message.match(/could not find the '([^']+)' column/i)?.[1];
+    if (unknown && unknown in extra) {
+      delete extra[unknown];
+      if (!Object.keys(extra).length) {
+        error = null;
+        break;
+      }
+      ({ error } = await supabase.from(table).update(extra).eq("id", id).eq("created_by", user.id));
+      continue;
     }
+    break;
   }
   if (error) throw new Error(`更新に失敗しました: ${error.message}`);
   revalidateAll();
