@@ -67,6 +67,7 @@ create table if not exists things (
   processed_image_url text,
   memo text,
   sort_order integer not null default 0,
+  intent text not null default 'happened' check (intent in ('happened', 'want')),
   created_by uuid not null references public.profiles(id),
   created_at timestamptz not null default now()
 );
@@ -78,6 +79,7 @@ create table if not exists posts (
   id uuid primary key default gen_random_uuid(),
   body text not null,
   entry_date date not null default current_date,
+  intent text not null default 'happened' check (intent in ('happened', 'want')),
   created_by uuid not null references public.profiles(id),
   created_at timestamptz not null default now()
 );
@@ -95,9 +97,10 @@ create table if not exists post_photos (
 create table if not exists places (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  visited_date date not null default current_date,
+  visited_date date default current_date,
   image_url text,
   memo text,
+  intent text not null default 'happened' check (intent in ('happened', 'want')),
   created_by uuid not null references public.profiles(id),
   created_at timestamptz not null default now()
 );
@@ -109,6 +112,7 @@ create table if not exists books (
   status text not null default 'finished' check (status in ('reading', 'finished')),
   image_url text,
   memo text,
+  intent text not null default 'happened' check (intent in ('happened', 'want')),
   created_by uuid not null references public.profiles(id),
   created_at timestamptz not null default now()
 );
@@ -120,6 +124,7 @@ create table if not exists sounds (
   image_url text,
   url text,
   memo text,
+  intent text not null default 'happened' check (intent in ('happened', 'want')),
   created_by uuid not null references public.profiles(id),
   created_at timestamptz not null default now()
 );
@@ -129,6 +134,7 @@ create table if not exists works (
   title text not null,
   period_label text,
   summary text,
+  intent text not null default 'happened' check (intent in ('happened', 'want')),
   created_by uuid not null references public.profiles(id),
   created_at timestamptz not null default now()
 );
@@ -143,6 +149,7 @@ create table if not exists podcasts (
   image_url text,
   url text,
   memo text,
+  intent text not null default 'happened' check (intent in ('happened', 'want')),
   created_by uuid not null references public.profiles(id),
   created_at timestamptz not null default now()
 );
@@ -153,6 +160,7 @@ create table if not exists movies (
   body text,
   image_url text,
   entry_date date not null default current_date,
+  intent text not null default 'happened' check (intent in ('happened', 'want')),
   created_by uuid not null references public.profiles(id),
   created_at timestamptz not null default now()
 );

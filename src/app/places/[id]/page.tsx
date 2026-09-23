@@ -16,7 +16,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="mx-auto w-full max-w-xl py-2">
-      <Link href="/#places" className="text-sm text-[#6B6258]">
+      <Link href={place.intent === "want" ? "/soon" : "/"} className="text-sm text-[#6B6258]">
         ← 戻る
       </Link>
       <div className="relative mt-6 aspect-[4/3] w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
@@ -26,7 +26,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ id
         ) : null}
       </div>
       <p className="mt-6 text-xs text-[#6B6258]">
-        {authorName(place)}が投稿 ・ {formatDate(place.visited_date)}
+        {authorName(place)}が投稿{place.visited_date ? ` ・ ${formatDate(place.visited_date)}` : place.intent === "want" ? " ・ これから行きたい" : ""}
       </p>
       <h1 className="mt-1 font-display text-2xl font-semibold break-words">{place.name}</h1>
       {place.memo && <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-[#3D362E]">{place.memo}</p>}

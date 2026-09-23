@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, Plus, UserRound } from "lucide-react";
+import { CalendarDays, Plus, Sparkles, UserRound } from "lucide-react";
 import { useAddFlow } from "@/components/add-flow";
 import { BrandLockup } from "@/components/brand-mark";
 import { FeedScopeBar } from "@/components/feed-scope";
@@ -12,9 +12,10 @@ export function AppHeader({ loggedIn }: { loggedIn: boolean }) {
   const pathname = usePathname();
   const { openAdd } = useAddFlow();
   const meHref = loggedIn ? "/admin" : "/login";
-  const homeActive = pathname === "/" || pathname.startsWith("/places") || pathname.startsWith("/things") || pathname.startsWith("/books") || pathname.startsWith("/sounds") || pathname.startsWith("/podcasts") || pathname.startsWith("/posts") || pathname.startsWith("/movies") || pathname.startsWith("/works");
+  const soonActive = pathname === "/soon";
   const meActive = pathname.startsWith("/admin") || pathname.startsWith("/login");
-  const showFeedScope = loggedIn && pathname === "/";
+  const happenedActive = !soonActive && !meActive;
+  const showFeedScope = loggedIn && (pathname === "/" || pathname === "/soon");
 
   return (
     <header className="glass-surface sticky top-0 z-40 border-b border-[#2F2A24]/10 pt-[env(safe-area-inset-top)]">
@@ -27,11 +28,21 @@ export function AppHeader({ loggedIn }: { loggedIn: boolean }) {
             href="/"
             className={cn(
               "flex min-h-11 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
-              homeActive ? "bg-[#2F2A24] text-[#F4EEE4]" : "text-[#6B6258]",
+              happenedActive ? "bg-[#2F2A24] text-[#F4EEE4]" : "text-[#6B6258]",
             )}
           >
-            <House className="h-4 w-4" />
-            ホーム
+            <CalendarDays className="h-4 w-4" />
+            あったこと
+          </Link>
+          <Link
+            href="/soon"
+            className={cn(
+              "flex min-h-11 items-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
+              soonActive ? "bg-[#2F2A24] text-[#F4EEE4]" : "text-[#6B6258]",
+            )}
+          >
+            <Sparkles className="h-4 w-4" />
+            これから
           </Link>
           {loggedIn ? (
             <button

@@ -27,7 +27,7 @@ export default async function AdminPage() {
     <div className="w-full py-2">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold">管理画面</h1>
+          <h1 className="font-display text-2xl font-semibold">自分</h1>
           <p className="mt-1 text-xs text-[#6B6258]">{user.displayName} としてログイン中</p>
         </div>
         <div className="flex gap-3 text-sm">
@@ -43,7 +43,7 @@ export default async function AdminPage() {
       </div>
 
       <p className="mb-8 rounded-xl bg-[#F4EEE4] px-4 py-3 text-xs text-[#6B6258]">
-        新規追加はTOPページの「＋追加」から行います。ここでは一覧の確認と、自分の投稿の削除のみできます。
+        新規追加は「あったこと」「これから」の「＋追加」から行います。ここでは一覧の確認と、自分の投稿の削除のみできます。
       </p>
 
       {!configured && (
@@ -54,7 +54,7 @@ export default async function AdminPage() {
         title="Places"
         rows={data.places.map((p) => ({
           id: p.id,
-          label: `${formatDate(p.visited_date)} ・ ${p.name}`,
+          label: `${p.intent === "want" ? "これから ・ " : ""}${p.visited_date ? `${formatDate(p.visited_date)} ・ ` : ""}${p.name}`,
           mine: p.created_by === user.id,
         }))}
         action={deletePlaceAction}
@@ -63,7 +63,7 @@ export default async function AdminPage() {
         title="Things"
         rows={data.things.map((p) => ({
           id: p.id,
-          label: `${p.brand ? `${p.brand} / ` : ""}${p.name}`,
+          label: `${p.intent === "want" ? "これから ・ " : ""}${p.brand ? `${p.brand} / ` : ""}${p.name}`,
           mine: p.created_by === user.id,
         }))}
         action={deleteThingAction}
@@ -72,7 +72,7 @@ export default async function AdminPage() {
         title="Books"
         rows={data.books.map((p) => ({
           id: p.id,
-          label: `${p.title}${p.status === "reading" ? "（読書中）" : ""}`,
+          label: `${p.intent === "want" ? "これから ・ " : ""}${p.title}${p.intent !== "want" && p.status === "reading" ? "（読書中）" : ""}`,
           mine: p.created_by === user.id,
         }))}
         action={deleteBookAction}
@@ -81,7 +81,7 @@ export default async function AdminPage() {
         title="Movies"
         rows={data.movies.map((p) => ({
           id: p.id,
-          label: p.title,
+          label: `${p.intent === "want" ? "これから ・ " : ""}${p.title}`,
           mine: p.created_by === user.id,
         }))}
         action={deleteMovieAction}
@@ -90,7 +90,7 @@ export default async function AdminPage() {
         title="Sounds"
         rows={data.sounds.map((p) => ({
           id: p.id,
-          label: `${p.artist ? `${p.artist} / ` : ""}${p.title}`,
+          label: `${p.intent === "want" ? "これから ・ " : ""}${p.artist ? `${p.artist} / ` : ""}${p.title}`,
           mine: p.created_by === user.id,
         }))}
         action={deleteSoundAction}
@@ -99,7 +99,7 @@ export default async function AdminPage() {
         title="Podcast"
         rows={data.podcasts.map((p) => ({
           id: p.id,
-          label: `${p.artist ? `${p.artist} / ` : ""}${p.title}`,
+          label: `${p.intent === "want" ? "これから ・ " : ""}${p.artist ? `${p.artist} / ` : ""}${p.title}`,
           mine: p.created_by === user.id,
         }))}
         action={deletePodcastAction}
@@ -108,7 +108,7 @@ export default async function AdminPage() {
         title="Posts"
         rows={data.posts.map((p) => ({
           id: p.id,
-          label: `${formatDate(p.entry_date)} ・ ${postPreview(p, 48)}`,
+          label: `${p.intent === "want" ? "これから ・ " : `${formatDate(p.entry_date)} ・ `}${postPreview(p, 48)}`,
           mine: p.created_by === user.id,
         }))}
         action={deletePostAction}
@@ -117,7 +117,7 @@ export default async function AdminPage() {
         title="Works"
         rows={data.works.map((p) => ({
           id: p.id,
-          label: p.title,
+          label: `${p.intent === "want" ? "これから ・ " : ""}${p.title}`,
           mine: p.created_by === user.id,
         }))}
         action={deleteWorkAction}

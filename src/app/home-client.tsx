@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { Children, useMemo, useState, type ReactNode } from "react";
+import { recordHappenedAction } from "@/app/actions";
 import { useAddFlow } from "@/components/add-flow";
 import { useFeedScope } from "@/components/feed-scope";
 import type { HomeData } from "@/lib/data";
 import { authorName, formatDate, postPreview, postText, toDateKey, todayKey, tokyoNow } from "@/lib/utils";
+import type { Intent } from "@/types";
 
-function itemDate(kind: string, row: { visited_date?: string; entry_date?: string; created_at: string }) {
+function itemDate(kind: string, row: { visited_date?: string | null; entry_date?: string; created_at: string }) {
   if (kind === "place") return toDateKey(row.visited_date ?? row.created_at);
   if (kind === "post" || kind === "movie") return toDateKey(row.entry_date ?? row.created_at);
   return toDateKey(row.created_at);
@@ -29,14 +31,18 @@ function emptyBundle(): DayBundle {
 }
 
 export function HomeClient({
+  intent,
   everyone,
   mine,
+  userId,
   loggedIn,
   displayName,
   configured,
 }: {
+  intent: Intent;
   everyone: HomeData;
   mine: HomeData | null;
+  userId: string | null;
   loggedIn: boolean;
   displayName: string | null;
   configured: boolean;
@@ -47,8 +53,10 @@ export function HomeClient({
   const [photo, setPhoto] = useState<{ day: number; index: number } | null>(null);
   const { scope } = useFeedScope();
   const { openAdd } = useAddFlow();
+  const want = intent === "want";
 
   const data = loggedIn && mine && scope === "mine" ? mine : everyone;
+  const canRecord = (row: { created_by: string }) => want && userId != null && row.created_by === userId;
 
   const monthPrefix = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}`;
 
@@ -100,7 +108,9 @@ export function HomeClient({
     <div className="w-full">
       <header className="mb-8">
         {displayName ? <p className="text-xs text-[#6B6258]">{displayName} としてログイン中</p> : null}
-        <p className={`text-xs text-[#6B6258]/70${displayName ? " mt-1" : ""}`}>更新日：{formatDate(todayKey())}</p>
+        <p className={`text-xs text-[#6B6258]/70${displayName ? " mt-1" : ""}`}>
+          {want ? "行きたい・やりたいことを、ここに置いておく。" : `更新日：${formatDate(todayKey())}`}
+        </p>
       </header>
 
       {!configured && (
@@ -112,108 +122,137 @@ export function HomeClient({
       <section id="places" className="mb-16">
         <SectionHead
           title="Places"
-          note="行ったお店。日付マスにお店の写真が出ます。"
+          note={want ? "行きたいお店。" : "行ったお店。日付マスにお店の写真が出ます。"}
           loggedIn={loggedIn}
           onAdd={() => openAdd("place")}
         />
-        <div className="mb-3 flex items-center justify-between text-sm text-[#6B6258]">
-          <button type="button" onClick={() => shiftMonth(-1)} className="px-2 py-1">
-            ‹
-          </button>
-          <span className="font-medium text-[#2F2A24]">
-            {cursor.year}年{cursor.month + 1}月
-          </span>
-          <button type="button" onClick={() => shiftMonth(1)} className="px-2 py-1">
-            ›
-          </button>
-        </div>
-        <div className="mb-1 grid w-full grid-cols-7 text-center text-[11px] text-[#6B6258]/70">
-          {["日", "月", "火", "水", "木", "金", "土"].map((d) => (
-            <span key={d}>{d}</span>
-          ))}
-        </div>
-        <div className="grid w-full grid-cols-7 gap-1.5 text-center text-sm">
-          {cells.map((day, idx) => {
-            if (day == null) return <span key={idx} className="aspect-square w-full min-w-0" />;
-            const key = `${monthPrefix}-${String(day).padStart(2, "0")}`;
-            const bundle = calendarItems[key];
-            const placePhotos = (bundle?.places ?? []).filter((p) => p.image_url);
-            const cover = placePhotos[0];
-            const isSelected = selectedDay === day;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => {
-                  setSelectedDay(day);
-                  if (placePhotos.length) setPhoto({ day, index: 0 });
-                }}
-                className={`relative aspect-square w-full min-w-0 overflow-hidden rounded-md ${isSelected && cover ? "ring-2 ring-[#B85C38]" : ""} ${!cover ? "hover:bg-[#F4EEE4]" : ""}`}
-              >
-                {cover ? (
-                  <>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={cover.image_url ?? ""} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                    <span className="absolute left-1 top-0.5 text-[10px] font-semibold text-white drop-shadow">{day}</span>
-                    {placePhotos.length > 1 && (
-                      <span className="absolute bottom-0.5 right-0.5 rounded bg-[#2F2A24]/80 px-1 text-[9px] font-semibold text-[#F4EEE4]">
-                        {placePhotos.length}
+        {want ? (
+          data.places.length ? (
+            <CardScroller>
+              {data.places.map((place) => (
+                <div key={place.id}>
+                  <Link href={`/places/${place.id}`} className="group block min-w-0">
+                    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
+                      {place.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={place.image_url} alt={place.name} className="absolute inset-0 h-full w-full object-cover" />
+                      ) : null}
+                      <AuthorTag name={authorName(place)} className="absolute bottom-1.5 left-1.5" />
+                    </div>
+                    <p className="mt-2 text-sm">{place.name}</p>
+                  </Link>
+                  {canRecord(place) ? <RecordForm table="places" id={place.id} /> : null}
+                </div>
+              ))}
+            </CardScroller>
+          ) : (
+            <p className="text-sm text-[#6B6258]">まだありません。</p>
+          )
+        ) : (
+          <>
+            <div className="mb-3 flex items-center justify-between text-sm text-[#6B6258]">
+              <button type="button" onClick={() => shiftMonth(-1)} className="px-2 py-1">
+                ‹
+              </button>
+              <span className="font-medium text-[#2F2A24]">
+                {cursor.year}年{cursor.month + 1}月
+              </span>
+              <button type="button" onClick={() => shiftMonth(1)} className="px-2 py-1">
+                ›
+              </button>
+            </div>
+            <div className="mb-1 grid w-full grid-cols-7 text-center text-[11px] text-[#6B6258]/70">
+              {["日", "月", "火", "水", "木", "金", "土"].map((d) => (
+                <span key={d}>{d}</span>
+              ))}
+            </div>
+            <div className="grid w-full grid-cols-7 gap-1.5 text-center text-sm">
+              {cells.map((day, idx) => {
+                if (day == null) return <span key={idx} className="aspect-square w-full min-w-0" />;
+                const key = `${monthPrefix}-${String(day).padStart(2, "0")}`;
+                const bundle = calendarItems[key];
+                const placePhotos = (bundle?.places ?? []).filter((p) => p.image_url);
+                const cover = placePhotos[0];
+                const isSelected = selectedDay === day;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDay(day);
+                      if (placePhotos.length) setPhoto({ day, index: 0 });
+                    }}
+                    className={`relative aspect-square w-full min-w-0 overflow-hidden rounded-md ${isSelected && cover ? "ring-2 ring-[#B85C38]" : ""} ${!cover ? "hover:bg-[#F4EEE4]" : ""}`}
+                  >
+                    {cover ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={cover.image_url ?? ""} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                        <span className="absolute left-1 top-0.5 text-[10px] font-semibold text-white drop-shadow">{day}</span>
+                        {placePhotos.length > 1 && (
+                          <span className="absolute bottom-0.5 right-0.5 rounded bg-[#2F2A24]/80 px-1 text-[9px] font-semibold text-[#F4EEE4]">
+                            {placePhotos.length}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="flex h-full flex-col items-center justify-center gap-0.5">
+                        <span>{day}</span>
+                        <span className="flex gap-0.5">
+                          {(bundle?.things.length ?? 0) > 0 && <i className="inline-block h-1.5 w-1.5 rounded-full bg-[#C9A227]" />}
+                          {(bundle?.books.length ?? 0) > 0 && <i className="inline-block h-1.5 w-1.5 rounded-full bg-[#8B5A6B]" />}
+                          {(bundle?.sounds.length ?? 0) > 0 && <i className="inline-block h-1.5 w-1.5 rounded-full bg-[#6B7C4F]" />}
+                          {(bundle?.podcasts.length ?? 0) > 0 && <i className="inline-block h-1.5 w-1.5 rounded-full bg-[#4F6F8B]" />}
+                          {(bundle?.posts.length ?? 0) > 0 && <i className="inline-block h-1.5 w-1.5 rounded-full bg-[#4F7C73]" />}
+                          {(bundle?.movies.length ?? 0) > 0 && <i className="inline-block h-1.5 w-1.5 rounded-full bg-[#8B5A7A]" />}
+                          {(bundle?.works.length ?? 0) > 0 && <i className="inline-block h-1.5 w-1.5 rounded-full bg-[#A65D3F]" />}
+                        </span>
                       </span>
                     )}
-                  </>
-                ) : (
-                  <span className="flex h-full flex-col items-center justify-center gap-0.5">
-                    <span>{day}</span>
-                    <span className="flex gap-0.5">
-                      {(bundle?.things.length ?? 0) > 0 && <i className="inline-block h-1.5 w-1.5 rounded-full bg-[#C9A227]" />}
-                      {(bundle?.books.length ?? 0) > 0 && <i className="inline-block h-1.5 w-1.5 rounded-full bg-[#8B5A6B]" />}
-                      {(bundle?.sounds.length ?? 0) > 0 && <i className="inline-block h-1.5 w-1.5 rounded-full bg-[#6B7C4F]" />}
-                      {(bundle?.podcasts.length ?? 0) > 0 && <i className="inline-block h-1.5 w-1.5 rounded-full bg-[#4F6F8B]" />}
-                      {(bundle?.posts.length ?? 0) > 0 && <i className="inline-block h-1.5 w-1.5 rounded-full bg-[#4F7C73]" />}
-                      {(bundle?.movies.length ?? 0) > 0 && <i className="inline-block h-1.5 w-1.5 rounded-full bg-[#8B5A7A]" />}
-                      {(bundle?.works.length ?? 0) > 0 && <i className="inline-block h-1.5 w-1.5 rounded-full bg-[#A65D3F]" />}
-                    </span>
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-[#6B6258]">
-          <span>写真 = Places（右下の数字 = その日2件以上）</span>
-          <span>ドット: Things / Books / Movies / Sounds / Podcast / Posts / Works</span>
-        </div>
-        <div className="mt-4 text-sm">
-          {selectedDay == null ? null : !selectedBundle ? (
-            <p className="text-[#6B6258]">
-              {cursor.year}年{cursor.month + 1}月{selectedDay}日 の記録はありません
-            </p>
-          ) : (
-            <DayList year={cursor.year} month={cursor.month + 1} day={selectedDay} bundle={selectedBundle} />
-          )}
-        </div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-[#6B6258]">
+              <span>写真 = Places（右下の数字 = その日2件以上）</span>
+              <span>ドット: Things / Books / Movies / Sounds / Podcast / Posts / Works</span>
+            </div>
+            <div className="mt-4 text-sm">
+              {selectedDay == null ? null : !selectedBundle ? (
+                <p className="text-[#6B6258]">
+                  {cursor.year}年{cursor.month + 1}月{selectedDay}日 の記録はありません
+                </p>
+              ) : (
+                <DayList year={cursor.year} month={cursor.month + 1} day={selectedDay} bundle={selectedBundle} />
+              )}
+            </div>
+          </>
+        )}
       </section>
 
       <section id="things" className="mb-16">
-        <SectionHead title="Things" loggedIn={loggedIn} onAdd={() => openAdd("thing")} />
+        <SectionHead title="Things" note={want ? "欲しいもの。" : undefined} loggedIn={loggedIn} onAdd={() => openAdd("thing")} />
         {data.things.length ? (
           <CardScroller>
             {data.things.map((thing) => (
-              <Link key={thing.id} href={`/things/${thing.id}`} className="group block min-w-0">
-                <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
-                  {(thing.processed_image_url || thing.original_image_url) && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={thing.processed_image_url ?? thing.original_image_url ?? ""}
-                      alt={thing.name}
-                      className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
-                    />
-                  )}
-                  <AuthorTag name={authorName(thing)} className="absolute bottom-1.5 left-1.5" />
-                </div>
-                {thing.brand && <p className="mt-2 text-xs text-[#6B6258]">{thing.brand}</p>}
-                <p className="text-sm">{thing.name}</p>
-              </Link>
+              <div key={thing.id}>
+                <Link href={`/things/${thing.id}`} className="group block min-w-0">
+                  <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
+                    {(thing.processed_image_url || thing.original_image_url) && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={thing.processed_image_url ?? thing.original_image_url ?? ""}
+                        alt={thing.name}
+                        className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
+                      />
+                    )}
+                    <AuthorTag name={authorName(thing)} className="absolute bottom-1.5 left-1.5" />
+                  </div>
+                  {thing.brand && <p className="mt-2 text-xs text-[#6B6258]">{thing.brand}</p>}
+                  <p className="text-sm">{thing.name}</p>
+                </Link>
+                {canRecord(thing) ? <RecordForm table="things" id={thing.id} /> : null}
+              </div>
             ))}
           </CardScroller>
         ) : (
@@ -222,24 +261,29 @@ export function HomeClient({
       </section>
 
       <section id="books" className="mb-16">
-        <SectionHead title="Books" loggedIn={loggedIn} onAdd={() => openAdd("book")} />
+        <SectionHead title="Books" note={want ? "読みたい本。" : undefined} loggedIn={loggedIn} onAdd={() => openAdd("book")} />
         {data.books.length ? (
           <CardScroller>
             {data.books.map((book) => (
-              <Link key={book.id} href={`/books/${book.id}`} className="group block min-w-0">
-                <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
-                  {book.image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={book.image_url} alt={book.title} className="absolute inset-0 h-full w-full object-cover" />
-                  )}
-                  <span className="absolute left-1.5 top-1.5 rounded-full bg-[#8B5A6B] px-2 py-0.5 text-[10px] text-[#F4EEE4]">
-                    {book.status === "reading" ? "読書中" : "読了"}
-                  </span>
-                  <AuthorTag name={authorName(book)} className="absolute bottom-1.5 left-1.5" />
-                </div>
-                <p className="mt-2 text-sm">{book.title}</p>
-                {book.author && <p className="text-xs text-[#6B6258]">{book.author}</p>}
-              </Link>
+              <div key={book.id}>
+                <Link href={`/books/${book.id}`} className="group block min-w-0">
+                  <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
+                    {book.image_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={book.image_url} alt={book.title} className="absolute inset-0 h-full w-full object-cover" />
+                    )}
+                    {!want && (
+                      <span className="absolute left-1.5 top-1.5 rounded-full bg-[#8B5A6B] px-2 py-0.5 text-[10px] text-[#F4EEE4]">
+                        {book.status === "reading" ? "読書中" : "読了"}
+                      </span>
+                    )}
+                    <AuthorTag name={authorName(book)} className="absolute bottom-1.5 left-1.5" />
+                  </div>
+                  <p className="mt-2 text-sm">{book.title}</p>
+                  {book.author && <p className="text-xs text-[#6B6258]">{book.author}</p>}
+                </Link>
+                {canRecord(book) ? <RecordForm table="books" id={book.id} /> : null}
+              </div>
             ))}
           </CardScroller>
         ) : (
@@ -248,21 +292,24 @@ export function HomeClient({
       </section>
 
       <section id="movies" className="mb-16">
-        <SectionHead title="Movies" loggedIn={loggedIn} onAdd={() => openAdd("movie")} />
+        <SectionHead title="Movies" note={want ? "観たい映画。" : undefined} loggedIn={loggedIn} onAdd={() => openAdd("movie")} />
         {data.movies.length ? (
           <CardScroller>
             {data.movies.map((movie) => (
-              <Link key={movie.id} href={`/movies/${movie.id}`} className="group block min-w-0">
-                <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
-                  {movie.image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={movie.image_url} alt={movie.title} className="absolute inset-0 h-full w-full object-cover" />
-                  )}
-                  <AuthorTag name={authorName(movie)} className="absolute bottom-1.5 left-1.5" />
-                </div>
-                <p className="mt-2 text-sm">{movie.title}</p>
-                {movie.body && <p className="line-clamp-2 text-xs text-[#6B6258]">{movie.body}</p>}
-              </Link>
+              <div key={movie.id}>
+                <Link href={`/movies/${movie.id}`} className="group block min-w-0">
+                  <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
+                    {movie.image_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={movie.image_url} alt={movie.title} className="absolute inset-0 h-full w-full object-cover" />
+                    )}
+                    <AuthorTag name={authorName(movie)} className="absolute bottom-1.5 left-1.5" />
+                  </div>
+                  <p className="mt-2 text-sm">{movie.title}</p>
+                  {movie.body && <p className="line-clamp-2 text-xs text-[#6B6258]">{movie.body}</p>}
+                </Link>
+                {canRecord(movie) ? <RecordForm table="movies" id={movie.id} /> : null}
+              </div>
             ))}
           </CardScroller>
         ) : (
@@ -271,21 +318,24 @@ export function HomeClient({
       </section>
 
       <section id="sounds" className="mb-16">
-        <SectionHead title="Sounds" loggedIn={loggedIn} onAdd={() => openAdd("sound")} />
+        <SectionHead title="Sounds" note={want ? "聴きたい音楽。" : undefined} loggedIn={loggedIn} onAdd={() => openAdd("sound")} />
         {data.sounds.length ? (
           <CardScroller>
             {data.sounds.map((sound) => (
-              <Link key={sound.id} href={`/sounds/${sound.id}`} className="block min-w-0">
-                <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
-                  {sound.image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={sound.image_url} alt={sound.title} className="absolute inset-0 h-full w-full object-cover" />
-                  )}
-                  <AuthorTag name={authorName(sound)} className="absolute bottom-1.5 left-1.5" />
-                </div>
-                <p className="mt-2 text-sm">{sound.title}</p>
-                {sound.artist && <p className="text-xs text-[#6B6258]">{sound.artist}</p>}
-              </Link>
+              <div key={sound.id}>
+                <Link href={`/sounds/${sound.id}`} className="block min-w-0">
+                  <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
+                    {sound.image_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={sound.image_url} alt={sound.title} className="absolute inset-0 h-full w-full object-cover" />
+                    )}
+                    <AuthorTag name={authorName(sound)} className="absolute bottom-1.5 left-1.5" />
+                  </div>
+                  <p className="mt-2 text-sm">{sound.title}</p>
+                  {sound.artist && <p className="text-xs text-[#6B6258]">{sound.artist}</p>}
+                </Link>
+                {canRecord(sound) ? <RecordForm table="sounds" id={sound.id} /> : null}
+              </div>
             ))}
           </CardScroller>
         ) : (
@@ -294,21 +344,24 @@ export function HomeClient({
       </section>
 
       <section id="podcasts" className="mb-16">
-        <SectionHead title="Podcast" loggedIn={loggedIn} onAdd={() => openAdd("podcast")} />
+        <SectionHead title="Podcast" note={want ? "聴きたいポッドキャスト。" : undefined} loggedIn={loggedIn} onAdd={() => openAdd("podcast")} />
         {data.podcasts.length ? (
           <CardScroller>
             {data.podcasts.map((podcast) => (
-              <Link key={podcast.id} href={`/podcasts/${podcast.id}`} className="block min-w-0">
-                <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
-                  {podcast.image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={podcast.image_url} alt={podcast.title} className="absolute inset-0 h-full w-full object-cover" />
-                  )}
-                  <AuthorTag name={authorName(podcast)} className="absolute bottom-1.5 left-1.5" />
-                </div>
-                <p className="mt-2 text-sm">{podcast.title}</p>
-                {podcast.artist && <p className="text-xs text-[#6B6258]">{podcast.artist}</p>}
-              </Link>
+              <div key={podcast.id}>
+                <Link href={`/podcasts/${podcast.id}`} className="block min-w-0">
+                  <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
+                    {podcast.image_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={podcast.image_url} alt={podcast.title} className="absolute inset-0 h-full w-full object-cover" />
+                    )}
+                    <AuthorTag name={authorName(podcast)} className="absolute bottom-1.5 left-1.5" />
+                  </div>
+                  <p className="mt-2 text-sm">{podcast.title}</p>
+                  {podcast.artist && <p className="text-xs text-[#6B6258]">{podcast.artist}</p>}
+                </Link>
+                {canRecord(podcast) ? <RecordForm table="podcasts" id={podcast.id} /> : null}
+              </div>
             ))}
           </CardScroller>
         ) : (
@@ -317,31 +370,34 @@ export function HomeClient({
       </section>
 
       <section id="posts" className="mb-16">
-        <SectionHead title="Posts" loggedIn={loggedIn} onAdd={() => openAdd("post")} />
+        <SectionHead title="Posts" note={want ? "やりたいこと。" : undefined} loggedIn={loggedIn} onAdd={() => openAdd("post")} />
         {data.posts.length ? (
           <CardScroller full>
             {data.posts.map((post) => {
               const photos = [...(post.post_photos ?? [])].sort((a, b) => a.sort_order - b.sort_order);
               const cover = photos[0];
               return (
-                <Link key={post.id} href={`/posts/${post.id}`} className="block min-w-0 rounded-xl bg-[#F4EEE4] p-4 ring-1 ring-[#2F2A24]/5">
-                  {cover ? (
-                    <div className="relative mb-3 aspect-[4/3] w-full overflow-hidden rounded-xl bg-[#E8DFD0]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={cover.image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                      <AuthorTag name={authorName(post)} className="absolute bottom-1.5 left-1.5" />
-                      {photos.length > 1 && (
-                        <span className="absolute bottom-1.5 right-1.5 rounded bg-[#2F2A24]/80 px-1.5 py-0.5 text-[10px] font-semibold text-[#F4EEE4]">
-                          {photos.length}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <AuthorTag name={authorName(post)} className="bg-[#E8DFD0]" />
-                  )}
-                  <p className={`${cover ? "mt-0" : "mt-2"} text-xs text-[#6B6258]`}>{formatDate(post.entry_date)}</p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{postText(post)}</p>
-                </Link>
+                <div key={post.id}>
+                  <Link href={`/posts/${post.id}`} className="block min-w-0 rounded-xl bg-[#F4EEE4] p-4 ring-1 ring-[#2F2A24]/5">
+                    {cover ? (
+                      <div className="relative mb-3 aspect-[4/3] w-full overflow-hidden rounded-xl bg-[#E8DFD0]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={cover.image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                        <AuthorTag name={authorName(post)} className="absolute bottom-1.5 left-1.5" />
+                        {photos.length > 1 && (
+                          <span className="absolute bottom-1.5 right-1.5 rounded bg-[#2F2A24]/80 px-1.5 py-0.5 text-[10px] font-semibold text-[#F4EEE4]">
+                            {photos.length}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <AuthorTag name={authorName(post)} className="bg-[#E8DFD0]" />
+                    )}
+                    {!want && <p className={`${cover ? "mt-0" : "mt-2"} text-xs text-[#6B6258]`}>{formatDate(post.entry_date)}</p>}
+                    <p className={`${want && !cover ? "mt-2" : "mt-2"} whitespace-pre-wrap text-sm leading-relaxed`}>{postText(post)}</p>
+                  </Link>
+                  {canRecord(post) ? <RecordForm table="posts" id={post.id} /> : null}
+                </div>
               );
             })}
           </CardScroller>
@@ -351,18 +407,21 @@ export function HomeClient({
       </section>
 
       <section id="works" className="mb-8">
-        <SectionHead title="Works" loggedIn={loggedIn} onAdd={() => openAdd("work")} />
+        <SectionHead title="Works" note={want ? "やりたい仕事。" : undefined} loggedIn={loggedIn} onAdd={() => openAdd("work")} />
         {data.works.length ? (
           <CardScroller>
             {data.works.map((work) => (
-              <Link key={work.id} href={`/works/${work.id}`} className="block min-w-0">
-                <div className="relative flex aspect-square w-full flex-col justify-end overflow-hidden rounded-xl bg-[#F4EEE4] p-3">
-                  <AuthorTag name={authorName(work)} className="absolute left-1.5 top-1.5 bg-[#E8DFD0]" />
-                  {work.period_label && <p className="text-xs text-[#6B6258]">{work.period_label}</p>}
-                  <p className="mt-1 font-display font-semibold leading-snug">{work.title}</p>
-                  {work.summary && <p className="mt-2 line-clamp-4 text-sm leading-relaxed text-[#6B6258]">{work.summary}</p>}
-                </div>
-              </Link>
+              <div key={work.id}>
+                <Link href={`/works/${work.id}`} className="block min-w-0">
+                  <div className="relative flex aspect-square w-full flex-col justify-end overflow-hidden rounded-xl bg-[#F4EEE4] p-3">
+                    <AuthorTag name={authorName(work)} className="absolute left-1.5 top-1.5 bg-[#E8DFD0]" />
+                    {work.period_label && <p className="text-xs text-[#6B6258]">{work.period_label}</p>}
+                    <p className="mt-1 font-display font-semibold leading-snug">{work.title}</p>
+                    {work.summary && <p className="mt-2 line-clamp-4 text-sm leading-relaxed text-[#6B6258]">{work.summary}</p>}
+                  </div>
+                </Link>
+                {canRecord(work) ? <RecordForm table="works" id={work.id} /> : null}
+              </div>
             ))}
           </CardScroller>
         ) : (
@@ -372,6 +431,7 @@ export function HomeClient({
 
       {photoItem && photo && (
         <div
+          data-no-tab-swipe
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#2F2A24]/70 p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setPhoto(null);
@@ -424,6 +484,18 @@ export function HomeClient({
         </div>
       )}
     </div>
+  );
+}
+
+function RecordForm({ table, id }: { table: string; id: string }) {
+  return (
+    <form action={recordHappenedAction} className="mt-2">
+      <input type="hidden" name="table" value={table} />
+      <input type="hidden" name="id" value={id} />
+      <button type="submit" className="text-xs font-medium text-[#B85C38] underline underline-offset-2">
+        記録する
+      </button>
+    </form>
   );
 }
 
@@ -518,4 +590,3 @@ function DayList({
     </>
   );
 }
-

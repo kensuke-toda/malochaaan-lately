@@ -3,6 +3,8 @@ export type Profile = {
   display_name: string;
 };
 
+export type Intent = "happened" | "want";
+
 export type Thing = {
   id: string;
   name: string;
@@ -12,6 +14,7 @@ export type Thing = {
   processed_image_url: string | null;
   memo: string | null;
   sort_order: number;
+  intent: Intent;
   created_by: string;
   created_at: string;
   profiles?: Profile | null;
@@ -20,9 +23,10 @@ export type Thing = {
 export type Place = {
   id: string;
   name: string;
-  visited_date: string;
+  visited_date: string | null;
   image_url: string | null;
   memo: string | null;
+  intent: Intent;
   created_by: string;
   created_at: string;
   profiles?: Profile | null;
@@ -35,6 +39,7 @@ export type Book = {
   status: "reading" | "finished";
   image_url: string | null;
   memo: string | null;
+  intent: Intent;
   created_by: string;
   created_at: string;
   profiles?: Profile | null;
@@ -47,6 +52,7 @@ export type Sound = {
   image_url: string | null;
   url: string | null;
   memo: string | null;
+  intent: Intent;
   created_by: string;
   created_at: string;
   profiles?: Profile | null;
@@ -66,6 +72,7 @@ export type Post = {
   body: string;
   title?: string | null;
   entry_date: string;
+  intent: Intent;
   created_by: string;
   created_at: string;
   post_photos?: PostPhoto[];
@@ -85,6 +92,7 @@ export type Movie = {
   body: string | null;
   image_url: string | null;
   entry_date: string;
+  intent: Intent;
   created_by: string;
   created_at: string;
   movie_photos?: MoviePhoto[];
@@ -96,6 +104,7 @@ export type Work = {
   title: string;
   period_label: string | null;
   summary: string | null;
+  intent: Intent;
   created_by: string;
   created_at: string;
   profiles?: Profile | null;

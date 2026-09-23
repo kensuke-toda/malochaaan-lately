@@ -8,6 +8,15 @@ import { downloadAllowedCover, findFallbackCover } from "@/lib/books/covers";
 import { fetchOpenBdBook } from "@/lib/books/openbd";
 import { isBookIsbn, normalizeIsbn } from "@/lib/books/isbn";
 import { createUserClient } from "@/lib/supabase/server";
+import type { Intent } from "@/types";
+import { todayKey } from "@/lib/utils";
+
+const CONTENT_TABLES = ["things", "places", "books", "sounds", "podcasts", "posts", "movies", "works"] as const;
+type ContentTable = (typeof CONTENT_TABLES)[number];
+
+function parseIntent(formData: FormData): Intent {
+  return formData.get("intent") === "want" ? "want" : "happened";
+}
 
 export type BookLookupResult = {
   title: string;
@@ -39,6 +48,7 @@ async function uploadImage(bucket: string, file: File) {
 
 function revalidateAll() {
   revalidatePath("/");
+  revalidatePath("/soon");
   revalidatePath("/admin");
 }
 
@@ -62,6 +72,7 @@ export async function createThingAction(formData: FormData) {
     product_url: String(formData.get("product_url") ?? "").trim() || null,
     memo: String(formData.get("memo") ?? "").trim() || null,
     original_image_url: originalImageUrl,
+    intent: parseIntent(formData),
     created_by: user.id,
   });
   if (error) return { error: `保存に失敗しました: ${error.message}` };
@@ -81,12 +92,14 @@ export async function createPlaceAction(formData: FormData) {
       return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
     }
   }
+  const intent = parseIntent(formData);
   const supabase = await createUserClient();
   const { error } = await supabase.from("places").insert({
     name,
-    visited_date: String(formData.get("visited_date") ?? "") || null,
+    visited_date: intent === "want" ? null : String(formData.get("visited_date") ?? "") || todayKey(),
     memo: String(formData.get("memo") ?? "").trim() || null,
     image_url: imageUrl,
+    intent,
     created_by: user.id,
   });
   if (error) return { error: `保存に失敗しました: ${error.message}` };
@@ -138,7 +151,8 @@ export async function createBookAction(formData: FormData) {
       return { error: e instanceof Error ? e.message : "書影の取得に失敗しました" };
     }
   }
-  const status = String(formData.get("status") ?? "finished");
+  const intent = parseIntent(formData);
+  const status = String(formData.get("status") ?? (intent === "want" ? "reading" : "finished"));
   const supabase = await createUserClient();
   const { error } = await supabase.from("books").insert({
     title,
@@ -146,6 +160,7 @@ export async function createBookAction(formData: FormData) {
     status: status === "reading" ? "reading" : "finished",
     memo: String(formData.get("memo") ?? "").trim() || null,
     image_url: imageUrl,
+    intent,
     created_by: user.id,
   });
   if (error) return { error: `保存に失敗しました: ${error.message}` };
@@ -172,6 +187,7 @@ export async function createSoundAction(formData: FormData) {
     url: String(formData.get("url") ?? "").trim() || null,
     memo: String(formData.get("memo") ?? "").trim() || null,
     image_url: imageUrl,
+    intent: parseIntent(formData),
     created_by: user.id,
   });
   if (error) return { error: `保存に失敗しました: ${error.message}` };
@@ -198,6 +214,7 @@ export async function createPodcastAction(formData: FormData) {
     url: String(formData.get("url") ?? "").trim() || null,
     memo: String(formData.get("memo") ?? "").trim() || null,
     image_url: imageUrl,
+    intent: parseIntent(formData),
     created_by: user.id,
   });
   if (error) return { error: `保存に失敗しました: ${error.message}` };
@@ -211,7 +228,8 @@ export async function createPostAction(formData: FormData) {
   const supabase = await createUserClient();
   const row = {
     body,
-    entry_date: String(formData.get("entry_date") ?? "") || null,
+    entry_date: String(formData.get("entry_date") ?? "") || todayKey(),
+    intent: parseIntent(formData),
     created_by: user.id,
   };
   let { data: post, error } = await supabase.from("posts").insert(row).select().single();
@@ -258,6 +276,7 @@ export async function createMovieAction(formData: FormData) {
     title,
     body: String(formData.get("body") ?? "").trim() || null,
     image_url: imageUrl,
+    intent: parseIntent(formData),
     created_by: user.id,
   });
   if (error) return { error: `保存に失敗しました: ${error.message}` };
@@ -273,6 +292,7 @@ export async function createWorkAction(formData: FormData) {
     title,
     period_label: String(formData.get("period_label") ?? "").trim() || null,
     summary: String(formData.get("summary") ?? "").trim() || null,
+    intent: parseIntent(formData),
     created_by: user.id,
   });
   if (error) return { error: `保存に失敗しました: ${error.message}` };
@@ -310,4 +330,20 @@ export async function deleteMovieAction(formData: FormData) {
 }
 export async function deleteWorkAction(formData: FormData) {
   await deleteOwn("works", String(formData.get("id") ?? ""));
+}
+
+export async function recordHappenedAction(formData: FormData) {
+  const user = await requireUser();
+  const table = String(formData.get("table") ?? "") as ContentTable;
+  const id = String(formData.get("id") ?? "");
+  if (!CONTENT_TABLES.includes(table) || !id) throw new Error("不正なリクエストです");
+
+  const extra: Record<string, unknown> = { intent: "happened" };
+  if (table === "places") extra.visited_date = todayKey();
+  if (table === "posts" || table === "movies") extra.entry_date = todayKey();
+
+  const supabase = await createUserClient();
+  const { error } = await supabase.from(table).update(extra).eq("id", id).eq("created_by", user.id);
+  if (error) throw new Error(`更新に失敗しました: ${error.message}`);
+  revalidateAll();
 }

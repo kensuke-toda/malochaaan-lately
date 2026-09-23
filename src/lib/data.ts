@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import type { Book, Movie, Place, Podcast, Post, Sound, Thing, Work } from "@/types";
+import type { Book, Intent, Movie, Place, Podcast, Post, Sound, Thing, Work } from "@/types";
 
 const PROFILE = "profiles(display_name)";
 
@@ -26,32 +26,51 @@ export const emptyHomeData: HomeData = {
   works: [],
 };
 
-export async function fetchHomeData(options: { createdBy?: string } = {}): Promise<HomeData> {
+function byIntent<T extends { intent?: Intent }>(rows: T[] | null, intent?: Intent) {
+  const list = rows ?? [];
+  if (!intent) return list;
+  return list.filter((row) => (row.intent ?? "happened") === intent);
+}
+
+export async function fetchHomeData(options: { createdBy?: string; intent?: Intent } = {}): Promise<HomeData> {
   if (!isSupabaseConfigured()) return emptyHomeData;
 
   const supabase = createClient();
-  const { createdBy } = options;
-  const byAuthor = (query: any) => (createdBy ? query.eq("created_by", createdBy) : query);
+  const { createdBy, intent } = options;
 
-  const [things, places, books, sounds, podcasts, posts, movies, works] = await Promise.all([
-    byAuthor(supabase.from("things").select(`*, ${PROFILE}`)).order("sort_order").order("created_at", { ascending: false }).limit(24),
-    byAuthor(supabase.from("places").select(`*, ${PROFILE}`)).order("visited_date", { ascending: false }).limit(24),
-    byAuthor(supabase.from("books").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
-    byAuthor(supabase.from("sounds").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
-    byAuthor(supabase.from("podcasts").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
-    byAuthor(supabase.from("posts").select(`*, post_photos(*), ${PROFILE}`)).order("entry_date", { ascending: false }).limit(24),
-    byAuthor(supabase.from("movies").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
-    byAuthor(supabase.from("works").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
-  ]);
+  async function load(filterIntent: boolean) {
+    const scoped = (query: any) => {
+      let next = createdBy ? query.eq("created_by", createdBy) : query;
+      if (filterIntent && intent) next = next.eq("intent", intent);
+      return next;
+    };
+    const placeOrder = intent === "want" ? "created_at" : "visited_date";
+    return Promise.all([
+      scoped(supabase.from("things").select(`*, ${PROFILE}`)).order("sort_order").order("created_at", { ascending: false }).limit(24),
+      scoped(supabase.from("places").select(`*, ${PROFILE}`)).order(placeOrder, { ascending: false }).limit(24),
+      scoped(supabase.from("books").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
+      scoped(supabase.from("sounds").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
+      scoped(supabase.from("podcasts").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
+      scoped(supabase.from("posts").select(`*, post_photos(*), ${PROFILE}`)).order("entry_date", { ascending: false }).limit(24),
+      scoped(supabase.from("movies").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
+      scoped(supabase.from("works").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
+    ]);
+  }
 
+  let rows = await load(Boolean(intent));
+  if (rows.some((row) => row.error?.message.toLowerCase().includes("intent"))) {
+    rows = await load(false);
+  }
+
+  const [things, places, books, sounds, podcasts, posts, movies, works] = rows;
   return {
-    things: (things.data as Thing[]) ?? [],
-    places: (places.data as Place[]) ?? [],
-    books: (books.data as Book[]) ?? [],
-    sounds: (sounds.data as Sound[]) ?? [],
-    podcasts: (podcasts.data as Podcast[]) ?? [],
-    posts: (posts.data as Post[]) ?? [],
-    movies: (movies.data as Movie[]) ?? [],
-    works: (works.data as Work[]) ?? [],
+    things: byIntent(things.data as Thing[], intent),
+    places: byIntent(places.data as Place[], intent),
+    books: byIntent(books.data as Book[], intent),
+    sounds: byIntent(sounds.data as Sound[], intent),
+    podcasts: byIntent(podcasts.data as Podcast[], intent),
+    posts: byIntent(posts.data as Post[], intent),
+    movies: byIntent(movies.data as Movie[], intent),
+    works: byIntent(works.data as Work[], intent),
   };
 }

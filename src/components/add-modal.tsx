@@ -14,6 +14,7 @@ import {
 } from "@/app/actions";
 import { BookIsbnLookup } from "@/components/book-isbn-lookup";
 import { todayKey } from "@/lib/utils";
+import type { Intent } from "@/types";
 
 export type ModalKind = "place" | "thing" | "book" | "sound" | "podcast" | "post" | "movie" | "work";
 
@@ -40,7 +41,7 @@ async function compressImage(file: File): Promise<File> {
   }
 }
 
-function BookFields({ disabled }: { disabled: boolean }) {
+function BookFields({ disabled, intent }: { disabled: boolean; intent: Intent }) {
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
   const [coverUrl, setCoverUrl] = useState("");
@@ -87,11 +88,15 @@ function BookFields({ disabled }: { disabled: boolean }) {
           </div>
         </div>
       ) : null}
-      <select name="status" defaultValue="finished" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base">
-        <option value="finished">読了</option>
-        <option value="reading">読書中</option>
-      </select>
-      <textarea name="memo" placeholder="感想・メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+      {intent === "want" ? (
+        <input type="hidden" name="status" value="reading" />
+      ) : (
+        <select name="status" defaultValue="finished" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base">
+          <option value="finished">読了</option>
+          <option value="reading">読書中</option>
+        </select>
+      )}
+      <textarea name="memo" placeholder={intent === "want" ? "メモ" : "感想・メモ"} rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
       <FileField name="image" label={coverUrl ? "カバー画像を選び直す" : "カバー画像を選択"} />
     </>
   );
@@ -120,19 +125,31 @@ function FileField({ name, label, multiple }: { name: string; label: string; mul
   );
 }
 
-export function AddModal({ kind, onClose }: { kind: ModalKind; onClose: () => void }) {
+export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: Intent; onClose: () => void }) {
+  const want = intent === "want";
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const titles: Record<ModalKind, string> = {
-    place: "お店を追加",
-    thing: "モノを追加",
-    book: "本を追加",
-    sound: "音楽を追加",
-    podcast: "ポッドキャストを追加",
-    post: "投稿を追加",
-    movie: "映画を追加",
-    work: "仕事を追加",
-  };
+  const titles: Record<ModalKind, string> = want
+    ? {
+        place: "行きたいお店",
+        thing: "欲しいもの",
+        book: "読みたい本",
+        sound: "聴きたい音楽",
+        podcast: "聴きたいポッドキャスト",
+        post: "やりたいこと",
+        movie: "観たい映画",
+        work: "やりたい仕事",
+      }
+    : {
+        place: "お店を追加",
+        thing: "モノを追加",
+        book: "本を追加",
+        sound: "音楽を追加",
+        podcast: "ポッドキャストを追加",
+        post: "投稿を追加",
+        movie: "映画を追加",
+        work: "仕事を追加",
+      };
   const actions = {
     place: createPlaceAction,
     thing: createThingAction,
@@ -189,10 +206,13 @@ export function AddModal({ kind, onClose }: { kind: ModalKind; onClose: () => vo
           </button>
         </div>
         <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+          <input type="hidden" name="intent" value={intent} />
           {kind === "place" && (
             <>
               <input name="name" required placeholder="店名（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
-              <input name="visited_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              {want ? null : (
+                <input name="visited_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              )}
               <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <FileField name="image" label="お店の写真を選択" />
             </>
@@ -206,7 +226,7 @@ export function AddModal({ kind, onClose }: { kind: ModalKind; onClose: () => vo
               <FileField name="image" label="写真を選択" />
             </>
           )}
-          {kind === "book" && <BookFields disabled={pending} />}
+          {kind === "book" && <BookFields disabled={pending} intent={intent} />}
           {kind === "sound" && (
             <>
               <input name="title" required placeholder="曲名（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
@@ -230,18 +250,20 @@ export function AddModal({ kind, onClose }: { kind: ModalKind; onClose: () => vo
               <textarea
                 name="body"
                 required
-                placeholder="いまなにしてる？"
+                placeholder={want ? "やりたいこと" : "いまなにしてる？"}
                 rows={5}
                 className="w-full min-w-0 resize-y rounded-xl bg-[#E8DFD0] px-3 py-3 text-base leading-relaxed"
               />
-              <input name="entry_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              {want ? null : (
+                <input name="entry_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              )}
               <FileField name="photos" label="写真を選択（複数可）" multiple />
             </>
           )}
           {kind === "movie" && (
             <>
               <input name="title" required placeholder="タイトル（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
-              <textarea name="body" placeholder="感想" rows={3} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <textarea name="body" placeholder={want ? "なぜ観たいか" : "感想"} rows={3} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <FileField name="image" label="写真を選択" />
             </>
           )}

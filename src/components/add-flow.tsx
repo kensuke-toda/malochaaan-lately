@@ -1,9 +1,11 @@
 "use client";
 
 import { createContext, useContext, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { AddModal, type ModalKind } from "@/components/add-modal";
+import type { Intent } from "@/types";
 
-const kinds: { kind: ModalKind; label: string }[] = [
+const happenedKinds: { kind: ModalKind; label: string }[] = [
   { kind: "place", label: "お店" },
   { kind: "thing", label: "モノ" },
   { kind: "book", label: "本" },
@@ -14,8 +16,20 @@ const kinds: { kind: ModalKind; label: string }[] = [
   { kind: "work", label: "仕事" },
 ];
 
+const wantKinds: { kind: ModalKind; label: string }[] = [
+  { kind: "place", label: "行きたいお店" },
+  { kind: "thing", label: "欲しいもの" },
+  { kind: "book", label: "読みたい本" },
+  { kind: "movie", label: "観たい映画" },
+  { kind: "sound", label: "聴きたい音楽" },
+  { kind: "podcast", label: "聴きたいポッドキャスト" },
+  { kind: "post", label: "やりたいこと" },
+  { kind: "work", label: "やりたい仕事" },
+];
+
 type AddFlowValue = {
   loggedIn: boolean;
+  intent: Intent;
   openAdd: (kind?: ModalKind) => void;
 };
 
@@ -34,6 +48,9 @@ export function AddFlowProvider({
   loggedIn: boolean;
   children: ReactNode;
 }) {
+  const pathname = usePathname();
+  const intent: Intent = pathname === "/soon" ? "want" : "happened";
+  const kinds = intent === "want" ? wantKinds : happenedKinds;
   const [picker, setPicker] = useState(false);
   const [kind, setKind] = useState<ModalKind | null>(null);
 
@@ -49,7 +66,7 @@ export function AddFlowProvider({
   }
 
   return (
-    <AddFlowContext.Provider value={{ loggedIn, openAdd }}>
+    <AddFlowContext.Provider value={{ loggedIn, intent, openAdd }}>
       {children}
       {picker ? (
         <div
@@ -60,7 +77,7 @@ export function AddFlowProvider({
         >
           <div className="w-full max-w-md rounded-t-2xl bg-[#F4EEE4] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:rounded-2xl sm:pb-5">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-display text-lg font-semibold">何を追加する？</h3>
+              <h3 className="font-display text-lg font-semibold">{intent === "want" ? "これから何を？" : "何を追加する？"}</h3>
               <button type="button" onClick={() => setPicker(false)} className="min-h-11 min-w-11 text-[#6B6258]">
                 ✕
               </button>
@@ -83,7 +100,7 @@ export function AddFlowProvider({
           </div>
         </div>
       ) : null}
-      {kind ? <AddModal kind={kind} onClose={() => setKind(null)} /> : null}
+      {kind ? <AddModal kind={kind} intent={intent} onClose={() => setKind(null)} /> : null}
     </AddFlowContext.Provider>
   );
 }
