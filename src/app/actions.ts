@@ -24,6 +24,15 @@ function missingColumn(error: { message?: string } | null | undefined, column: s
   return msg.includes(column) && (msg.includes("schema cache") || msg.includes("could not find"));
 }
 
+function notNullColumn(error: { message?: string } | null | undefined) {
+  return error?.message?.match(/null value in column "([^"]+)"/i)?.[1] ?? null;
+}
+
+const NOT_NULL_FALLBACKS: Record<string, () => unknown> = {
+  visited_date: () => todayKey(),
+  entry_date: () => todayKey(),
+};
+
 async function insertContent(
   supabase: Awaited<ReturnType<typeof createUserClient>>,
   table: ContentTable,
@@ -35,14 +44,27 @@ async function insertContent(
 
   let payload = { ...row };
   let result = await run(payload);
-  if (missingColumn(result.error, "intent") && "intent" in payload) {
-    const { intent: _intent, ...rest } = payload;
-    payload = rest;
-    result = await run(payload);
-  }
-  if (table === "posts" && result.error?.message.toLowerCase().includes("title")) {
-    payload = { ...payload, title: payload.body };
-    result = await run(payload);
+  for (let i = 0; i < 4 && result.error; i++) {
+    const err = result.error;
+    if (missingColumn(err, "intent") && "intent" in payload) {
+      const { intent: _intent, ...rest } = payload;
+      payload = rest;
+      result = await run(payload);
+      continue;
+    }
+    if (table === "posts" && err.message.toLowerCase().includes("title")) {
+      payload = { ...payload, title: payload.body };
+      result = await run(payload);
+      continue;
+    }
+    const column = notNullColumn(err);
+    const fallback = column ? NOT_NULL_FALLBACKS[column] : undefined;
+    if (column && fallback && payload[column] == null) {
+      payload = { ...payload, [column]: fallback() };
+      result = await run(payload);
+      continue;
+    }
+    break;
   }
   return result;
 }
