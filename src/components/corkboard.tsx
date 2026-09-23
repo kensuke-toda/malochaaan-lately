@@ -154,7 +154,9 @@ export function Corkboard({
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h2 className="font-display text-xl font-semibold">Cork</h2>
-          <p className="text-xs text-[#6B6258]">もらったステッカーを、ここに貼る。</p>
+          <p className="text-xs text-[#6B6258]">
+            {loggedIn && !editing ? "ボードをタップすると並べられる。" : "もらったステッカーを、ここに貼る。"}
+          </p>
         </div>
         {loggedIn ? (
           <div className="flex shrink-0 gap-2">
@@ -184,7 +186,7 @@ export function Corkboard({
         ref={boardRef}
         data-no-tab-swipe
         data-allow-multitouch={editing ? "" : undefined}
-        className="relative isolate aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-inner sm:aspect-[16/10]"
+        className={`relative isolate aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-inner sm:aspect-[16/10]${loggedIn && !editing ? " cursor-pointer" : ""}`}
         style={{
           contain: "paint",
           backgroundColor: "#C4A574",
@@ -194,6 +196,9 @@ export function Corkboard({
         }}
         onPointerDown={() => {
           if (editing) setSelected(null);
+        }}
+        onClick={() => {
+          if (loggedIn && !editing) setEditing(true);
         }}
       >
         {!shown.length ? (
@@ -223,6 +228,14 @@ export function Corkboard({
                 e.stopPropagation();
                 if ((e.target as Element).closest("button, form")) return;
                 if (editing && mine) startDrag(pin.id, "move", e);
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!loggedIn) return;
+                if (!editing) {
+                  setEditing(true);
+                  if (mine) setSelected(pin.id);
+                }
               }}
             >
               <div className={`relative ${on && editing ? "ring-2 ring-[#B85C38] ring-offset-2 ring-offset-transparent" : ""}`}>
