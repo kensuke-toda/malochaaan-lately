@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import {
   createBookAction,
   createMovieAction,
@@ -161,6 +162,7 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
     work: createWorkAction,
   };
   const today = todayKey();
+  const router = useRouter();
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -183,6 +185,7 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
         setError(result.error);
         return;
       }
+      router.refresh();
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存に失敗しました");

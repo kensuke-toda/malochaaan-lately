@@ -10,6 +10,7 @@ import { isBookIsbn, normalizeIsbn } from "@/lib/books/isbn";
 import { createUserClient } from "@/lib/supabase/server";
 import type { Intent } from "@/types";
 import { CORK_BRAND } from "@/lib/data";
+import { WANT_DATE, markWantText, stripWantMark } from "@/lib/intent";
 import { todayKey } from "@/lib/utils";
 
 const CONTENT_TABLES = ["things", "places", "books", "sounds", "podcasts", "posts", "movies", "works"] as const;
@@ -61,6 +62,13 @@ async function insertContent(
     const fallback = column ? NOT_NULL_FALLBACKS[column] : undefined;
     if (column && fallback && payload[column] == null) {
       payload = { ...payload, [column]: fallback() };
+      result = await run(payload);
+      continue;
+    }
+    const unknown = err.message.match(/could not find the '([^']+)' column/i)?.[1];
+    if (unknown && unknown in payload) {
+      const { [unknown]: _drop, ...rest } = payload;
+      payload = rest;
       result = await run(payload);
       continue;
     }
@@ -116,14 +124,15 @@ export async function createThingAction(formData: FormData) {
       return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
     }
   }
+  const intent = parseIntent(formData);
   const supabase = await createUserClient();
   const { error } = await insertContent(supabase, "things", {
     name,
     brand: String(formData.get("brand") ?? "").trim() || null,
     product_url: String(formData.get("product_url") ?? "").trim() || null,
-    memo: String(formData.get("memo") ?? "").trim() || null,
+    memo: markWantText(String(formData.get("memo") ?? "").trim() || null, intent === "want"),
     original_image_url: originalImageUrl,
-    intent: parseIntent(formData),
+    intent,
     created_by: user.id,
   });
   if (error) return { error: `保存に失敗しました: ${error.message}` };
@@ -147,8 +156,8 @@ export async function createPlaceAction(formData: FormData) {
   const supabase = await createUserClient();
   const { error } = await insertContent(supabase, "places", {
     name,
-    visited_date: intent === "want" ? null : String(formData.get("visited_date") ?? "") || todayKey(),
-    memo: String(formData.get("memo") ?? "").trim() || null,
+    visited_date: intent === "want" ? WANT_DATE : String(formData.get("visited_date") ?? "") || todayKey(),
+    memo: markWantText(String(formData.get("memo") ?? "").trim() || null, intent === "want"),
     image_url: imageUrl,
     intent,
     created_by: user.id,
@@ -209,7 +218,7 @@ export async function createBookAction(formData: FormData) {
     title,
     author: String(formData.get("author") ?? "").trim() || null,
     status: status === "reading" ? "reading" : "finished",
-    memo: String(formData.get("memo") ?? "").trim() || null,
+    memo: markWantText(String(formData.get("memo") ?? "").trim() || null, intent === "want"),
     image_url: imageUrl,
     intent,
     created_by: user.id,
@@ -236,7 +245,7 @@ export async function createSoundAction(formData: FormData) {
     title,
     artist: String(formData.get("artist") ?? "").trim() || null,
     url: String(formData.get("url") ?? "").trim() || null,
-    memo: String(formData.get("memo") ?? "").trim() || null,
+    memo: markWantText(String(formData.get("memo") ?? "").trim() || null, parseIntent(formData) === "want"),
     image_url: imageUrl,
     intent: parseIntent(formData),
     created_by: user.id,
@@ -263,7 +272,7 @@ export async function createPodcastAction(formData: FormData) {
     title,
     artist: String(formData.get("artist") ?? "").trim() || null,
     url: String(formData.get("url") ?? "").trim() || null,
-    memo: String(formData.get("memo") ?? "").trim() || null,
+    memo: markWantText(String(formData.get("memo") ?? "").trim() || null, parseIntent(formData) === "want"),
     image_url: imageUrl,
     intent: parseIntent(formData),
     created_by: user.id,
@@ -277,13 +286,14 @@ export async function createPostAction(formData: FormData) {
   const body = String(formData.get("body") ?? "").trim();
   if (!body) return { error: "本文は必須です" };
   const supabase = await createUserClient();
+  const intent = parseIntent(formData);
   const { data: post, error } = await insertContent(
     supabase,
     "posts",
     {
-      body,
-      entry_date: String(formData.get("entry_date") ?? "") || todayKey(),
-      intent: parseIntent(formData),
+      body: markWantText(body, intent === "want") ?? body,
+      entry_date: intent === "want" ? WANT_DATE : String(formData.get("entry_date") ?? "") || todayKey(),
+      intent,
       created_by: user.id,
     },
     true,
@@ -323,12 +333,14 @@ export async function createMovieAction(formData: FormData) {
       return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
     }
   }
+  const intent = parseIntent(formData);
   const supabase = await createUserClient();
   const { error } = await insertContent(supabase, "movies", {
     title,
-    body: String(formData.get("body") ?? "").trim() || null,
+    body: markWantText(String(formData.get("body") ?? "").trim() || null, intent === "want"),
     image_url: imageUrl,
-    intent: parseIntent(formData),
+    entry_date: intent === "want" ? WANT_DATE : todayKey(),
+    intent,
     created_by: user.id,
   });
   if (error) return { error: `保存に失敗しました: ${error.message}` };
@@ -339,12 +351,13 @@ export async function createWorkAction(formData: FormData) {
   const user = await requireUser();
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { error: "タイトルは必須です" };
+  const intent = parseIntent(formData);
   const supabase = await createUserClient();
   const { error } = await insertContent(supabase, "works", {
     title,
     period_label: String(formData.get("period_label") ?? "").trim() || null,
-    summary: String(formData.get("summary") ?? "").trim() || null,
-    intent: parseIntent(formData),
+    summary: markWantText(String(formData.get("summary") ?? "").trim() || null, intent === "want"),
+    intent,
     created_by: user.id,
   });
   if (error) return { error: `保存に失敗しました: ${error.message}` };
@@ -472,6 +485,11 @@ export async function recordHappenedAction(formData: FormData) {
   if (table === "posts" || table === "movies") extra.entry_date = todayKey();
 
   const supabase = await createUserClient();
+  const { data: current } = await supabase.from(table).select("memo, body, summary").eq("id", id).maybeSingle();
+  if (current && "memo" in current && current.memo != null) extra.memo = stripWantMark(String(current.memo)) || null;
+  if (current && "body" in current && current.body != null) extra.body = stripWantMark(String(current.body)) || null;
+  if (current && "summary" in current && current.summary != null) extra.summary = stripWantMark(String(current.summary)) || null;
+
   let { error } = await supabase.from(table).update(extra).eq("id", id).eq("created_by", user.id);
   if (missingColumn(error, "intent") && "intent" in extra) {
     const { intent: _intent, ...rest } = extra;

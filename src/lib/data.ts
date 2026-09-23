@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isWantRow, stripWantMark } from "@/lib/intent";
 import type { Book, Intent, Movie, Pin, Place, Podcast, Post, Profile, Sound, Thing, Work } from "@/types";
 
 const PROFILE = "profiles(display_name)";
@@ -59,10 +60,22 @@ export const emptyHomeData: HomeData = {
   profiles: [],
 };
 
-function byIntent<T extends { intent?: Intent }>(rows: T[] | null, intent?: Intent) {
+function revealWant<T extends { memo?: string | null; body?: string | null; summary?: string | null }>(row: T): T {
+  return {
+    ...row,
+    ...(row.memo != null ? { memo: stripWantMark(row.memo) || null } : {}),
+    ...(row.body != null ? { body: stripWantMark(row.body) || null } : {}),
+    ...(row.summary != null ? { summary: stripWantMark(row.summary) || null } : {}),
+  };
+}
+
+function byIntent<T extends { intent?: Intent; visited_date?: string | null; entry_date?: string | null; memo?: string | null; body?: string | null; summary?: string | null }>(
+  rows: T[] | null,
+  intent?: Intent,
+) {
   const list = rows ?? [];
-  if (!intent) return list;
-  return list.filter((row) => (row.intent ?? "happened") === intent);
+  const filtered = !intent ? list : list.filter((row) => (intent === "want" ? isWantRow(row) : !isWantRow(row)));
+  return filtered.map(revealWant);
 }
 
 export async function fetchHomeData(options: { createdBy?: string; intent?: Intent } = {}): Promise<HomeData> {
@@ -71,29 +84,24 @@ export async function fetchHomeData(options: { createdBy?: string; intent?: Inte
   const supabase = createClient();
   const { createdBy, intent } = options;
 
-  async function load(filterIntent: boolean) {
-    const scoped = (query: any) => {
-      let next = createdBy ? query.eq("created_by", createdBy) : query;
-      if (filterIntent && intent) next = next.eq("intent", intent);
-      return next;
-    };
+  async function load() {
+    const scoped = (query: any) => (createdBy ? query.eq("created_by", createdBy) : query);
+    const cap = intent === "want" ? 48 : 24;
     const placeOrder = intent === "want" ? "created_at" : "visited_date";
+    const listOrder = intent === "want" ? "created_at" : "created_at";
     return Promise.all([
-      scoped(supabase.from("things").select(`*, ${PROFILE}`)).order("sort_order").order("created_at", { ascending: false }).limit(24),
-      scoped(supabase.from("places").select(`*, ${PROFILE}`)).order(placeOrder, { ascending: false }).limit(24),
-      scoped(supabase.from("books").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
-      scoped(supabase.from("sounds").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
-      scoped(supabase.from("podcasts").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
-      scoped(supabase.from("posts").select(`*, post_photos(*), ${PROFILE}`)).order("entry_date", { ascending: false }).limit(24),
-      scoped(supabase.from("movies").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
-      scoped(supabase.from("works").select(`*, ${PROFILE}`)).order("created_at", { ascending: false }).limit(24),
+      scoped(supabase.from("things").select(`*, ${PROFILE}`)).order(intent === "want" ? "created_at" : "sort_order").order("created_at", { ascending: false }).limit(cap),
+      scoped(supabase.from("places").select(`*, ${PROFILE}`)).order(placeOrder, { ascending: false }).limit(cap),
+      scoped(supabase.from("books").select(`*, ${PROFILE}`)).order(listOrder, { ascending: false }).limit(cap),
+      scoped(supabase.from("sounds").select(`*, ${PROFILE}`)).order(listOrder, { ascending: false }).limit(cap),
+      scoped(supabase.from("podcasts").select(`*, ${PROFILE}`)).order(listOrder, { ascending: false }).limit(cap),
+      scoped(supabase.from("posts").select(`*, post_photos(*), ${PROFILE}`)).order(intent === "want" ? "created_at" : "entry_date", { ascending: false }).limit(cap),
+      scoped(supabase.from("movies").select(`*, ${PROFILE}`)).order(listOrder, { ascending: false }).limit(cap),
+      scoped(supabase.from("works").select(`*, ${PROFILE}`)).order(listOrder, { ascending: false }).limit(cap),
     ]);
   }
 
-  let rows = await load(Boolean(intent));
-  if (rows.some((row) => row.error?.message.toLowerCase().includes("intent"))) {
-    rows = await load(false);
-  }
+  const rows = await load();
 
   const [things, places, books, sounds, podcasts, posts, movies, works] = rows;
   const [cork, profiles] = await Promise.all([

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isWantDate, isWantRow } from "@/lib/intent";
 import { formatDate, postPreview } from "@/lib/utils";
 import {
   deleteBookAction,
@@ -64,7 +65,7 @@ export default async function AdminPage() {
         title="Places"
         rows={data.places.map((p) => ({
           id: p.id,
-          label: `${p.intent === "want" ? "これから ・ " : ""}${p.visited_date ? `${formatDate(p.visited_date)} ・ ` : ""}${p.name}`,
+          label: `${isWantRow(p) ? "これから ・ " : ""}${p.visited_date && !isWantDate(p.visited_date) ? `${formatDate(p.visited_date)} ・ ` : ""}${p.name}`,
           mine: p.created_by === user.id,
         }))}
         action={deletePlaceAction}
@@ -73,7 +74,7 @@ export default async function AdminPage() {
         title="Things"
         rows={data.things.map((p) => ({
           id: p.id,
-          label: `${p.intent === "want" ? "これから ・ " : ""}${p.brand ? `${p.brand} / ` : ""}${p.name}`,
+          label: `${isWantRow(p) ? "これから ・ " : ""}${p.brand ? `${p.brand} / ` : ""}${p.name}`,
           mine: p.created_by === user.id,
         }))}
         action={deleteThingAction}
@@ -82,7 +83,7 @@ export default async function AdminPage() {
         title="Books"
         rows={data.books.map((p) => ({
           id: p.id,
-          label: `${p.intent === "want" ? "これから ・ " : ""}${p.title}${p.intent !== "want" && p.status === "reading" ? "（読書中）" : ""}`,
+          label: `${isWantRow(p) ? "これから ・ " : ""}${p.title}${!isWantRow(p) && p.status === "reading" ? "（読書中）" : ""}`,
           mine: p.created_by === user.id,
         }))}
         action={deleteBookAction}
@@ -91,7 +92,7 @@ export default async function AdminPage() {
         title="Movies"
         rows={data.movies.map((p) => ({
           id: p.id,
-          label: `${p.intent === "want" ? "これから ・ " : ""}${p.title}`,
+          label: `${isWantRow(p) ? "これから ・ " : ""}${p.title}`,
           mine: p.created_by === user.id,
         }))}
         action={deleteMovieAction}
@@ -100,7 +101,7 @@ export default async function AdminPage() {
         title="Sounds"
         rows={data.sounds.map((p) => ({
           id: p.id,
-          label: `${p.intent === "want" ? "これから ・ " : ""}${p.artist ? `${p.artist} / ` : ""}${p.title}`,
+          label: `${isWantRow(p) ? "これから ・ " : ""}${p.artist ? `${p.artist} / ` : ""}${p.title}`,
           mine: p.created_by === user.id,
         }))}
         action={deleteSoundAction}
@@ -109,7 +110,7 @@ export default async function AdminPage() {
         title="Podcast"
         rows={data.podcasts.map((p) => ({
           id: p.id,
-          label: `${p.intent === "want" ? "これから ・ " : ""}${p.artist ? `${p.artist} / ` : ""}${p.title}`,
+          label: `${isWantRow(p) ? "これから ・ " : ""}${p.artist ? `${p.artist} / ` : ""}${p.title}`,
           mine: p.created_by === user.id,
         }))}
         action={deletePodcastAction}
@@ -118,7 +119,7 @@ export default async function AdminPage() {
         title="Posts"
         rows={data.posts.map((p) => ({
           id: p.id,
-          label: `${p.intent === "want" ? "これから ・ " : `${formatDate(p.entry_date)} ・ `}${postPreview(p, 48)}`,
+          label: `${isWantRow(p) ? "これから ・ " : isWantDate(p.entry_date) ? "" : `${formatDate(p.entry_date)} ・ `}${postPreview(p, 48)}`,
           mine: p.created_by === user.id,
         }))}
         action={deletePostAction}
@@ -127,7 +128,7 @@ export default async function AdminPage() {
         title="Works"
         rows={data.works.map((p) => ({
           id: p.id,
-          label: `${p.intent === "want" ? "これから ・ " : ""}${p.title}`,
+          label: `${isWantRow(p) ? "これから ・ " : ""}${p.title}`,
           mine: p.created_by === user.id,
         }))}
         action={deleteWorkAction}

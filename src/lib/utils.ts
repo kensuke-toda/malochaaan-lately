@@ -41,9 +41,9 @@ export function authorName(row: { profiles?: { display_name: string } | null }) 
 }
 
 export function postText(post: { body?: string | null; title?: string | null }) {
-  const body = (post.body ?? "").trim();
+  const body = (post.body ?? "").replaceAll("\u2060", "").trim();
   if (body) return body;
-  return (post.title ?? "").trim();
+  return (post.title ?? "").replaceAll("\u2060", "").trim();
 }
 
 export function postPreview(post: { body?: string | null; title?: string | null }, max = 40) {
