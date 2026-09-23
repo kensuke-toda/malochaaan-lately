@@ -51,14 +51,17 @@ export function Corkboard({
   const [adding, setAdding] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [dragging, setDragging] = useState<string | null>(null);
+  const [removed, setRemoved] = useState<Record<string, true>>({});
   const draftsRef = useRef(drafts);
   draftsRef.current = drafts;
   const nextZ = useRef(Math.max(0, ...pins.map((p) => p.z_index)) + 1);
 
-  const shown = pins.map((pin) => {
-    const draft = drafts[pin.id];
-    return draft ? { ...pin, ...draft } : pin;
-  });
+  const shown = pins
+    .filter((pin) => !removed[pin.id])
+    .map((pin) => {
+      const draft = drafts[pin.id];
+      return draft ? { ...pin, ...draft } : pin;
+    });
 
   function patch(id: string, next: Partial<Draft>) {
     const pin = shown.find((p) => p.id === id);
@@ -218,6 +221,7 @@ export function Corkboard({
               }}
               onPointerDown={(e) => {
                 e.stopPropagation();
+                if ((e.target as Element).closest("button, form")) return;
                 if (editing && mine) startDrag(pin.id, "move", e);
               }}
             >
@@ -248,12 +252,25 @@ export function Corkboard({
                       className="absolute bottom-0 right-0 h-4 w-4 translate-x-1 translate-y-1 rounded-sm bg-[#2F2A24]"
                       onPointerDown={(e) => startDrag(pin.id, "scale", e)}
                     />
-                    <form action={deletePinAction} className="absolute -right-1 -top-7">
-                      <input type="hidden" name="id" value={pin.id} />
-                      <button type="submit" className="rounded-full bg-[#B85C38] px-2 py-0.5 text-[10px] font-semibold text-[#F4EEE4]">
-                        外す
-                      </button>
-                    </form>
+                    <button
+                      type="button"
+                      className="absolute -right-1 -top-8 min-h-11 rounded-full bg-[#B85C38] px-3 text-xs font-semibold text-[#F4EEE4]"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setRemoved((prev) => ({ ...prev, [pin.id]: true }));
+                        setSelected(null);
+                        const fd = new FormData();
+                        fd.set("id", pin.id);
+                        void deletePinAction(fd);
+                      }}
+                    >
+                      外す
+                    </button>
                   </>
                 ) : null}
               </div>

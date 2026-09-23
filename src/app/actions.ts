@@ -405,7 +405,6 @@ export async function deletePinAction(formData: FormData) {
     .from("things")
     .delete()
     .eq("id", String(formData.get("id") ?? ""))
-    .eq("brand", CORK_BRAND)
     .eq("created_by", user.id);
   if (error) throw new Error(`削除に失敗しました: ${error.message}`);
   revalidateAll();
