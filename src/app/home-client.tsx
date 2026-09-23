@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Children, useMemo, useState, type ReactNode } from "react";
 import { recordHappenedAction } from "@/app/actions";
 import { useAddFlow } from "@/components/add-flow";
+import { Corkboard } from "@/components/corkboard";
 import { useFeedScope } from "@/components/feed-scope";
 import type { HomeData } from "@/lib/data";
 import { authorName, formatDate, postPreview, postText, toDateKey, todayKey, tokyoNow } from "@/lib/utils";
@@ -118,6 +119,8 @@ export function HomeClient({
           Supabase が未設定です。<code>.env.local</code> に URL とキーを入れてください。画面の骨格はこのまま確認できます。
         </div>
       )}
+
+      {!want ? <Corkboard pins={data.pins} userId={userId} loggedIn={loggedIn} /> : null}
 
       <section id="places" className="mb-16">
         <SectionHead

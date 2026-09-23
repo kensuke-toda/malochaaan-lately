@@ -4,6 +4,7 @@ import {
   deleteBookAction,
   deleteMovieAction,
   deletePlaceAction,
+  deletePinAction,
   deletePodcastAction,
   deletePostAction,
   deleteSoundAction,
@@ -50,6 +51,15 @@ export default async function AdminPage() {
         <p className="mb-8 rounded-xl bg-[#F4EEE4] px-4 py-3 text-sm text-[#B85C38]">Supabase が未設定のため、データはありません。</p>
       )}
 
+      <AdminList
+        title="Cork"
+        rows={data.pins.map((p) => ({
+          id: p.id,
+          label: p.memo?.trim() || "ステッカー",
+          mine: p.created_by === user.id,
+        }))}
+        action={deletePinAction}
+      />
       <AdminList
         title="Places"
         rows={data.places.map((p) => ({

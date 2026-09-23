@@ -110,6 +110,20 @@ export type Work = {
   profiles?: Profile | null;
 };
 
+export type Pin = {
+  id: string;
+  image_url: string;
+  memo: string | null;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  z_index: number;
+  created_by: string;
+  created_at: string;
+  profiles?: Profile | null;
+};
+
 export type SessionUser = {
   id: string;
   email: string | null;

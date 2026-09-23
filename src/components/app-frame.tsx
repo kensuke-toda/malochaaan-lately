@@ -12,7 +12,10 @@ function useLockPageZoom() {
       event.preventDefault();
     };
     const preventMultiTouch = (event: TouchEvent) => {
-      if (event.touches.length > 1) event.preventDefault();
+      if (event.touches.length <= 1) return;
+      const target = event.target;
+      if (target instanceof Element && target.closest("[data-allow-multitouch]")) return;
+      event.preventDefault();
     };
     document.addEventListener("gesturestart", preventGesture);
     document.addEventListener("gesturechange", preventGesture);

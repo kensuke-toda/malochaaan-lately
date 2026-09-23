@@ -332,6 +332,60 @@ export async function deleteWorkAction(formData: FormData) {
   await deleteOwn("works", String(formData.get("id") ?? ""));
 }
 
+export async function createPinAction(formData: FormData) {
+  const user = await requireUser();
+  const image = formData.get("image");
+  if (!(image instanceof File) || image.size === 0) return { error: "写真は必須です" };
+  let imageUrl: string;
+  try {
+    imageUrl = await uploadImage("pins-images", image);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
+  }
+  const supabase = await createUserClient();
+  const { data: top } = await supabase.from("pins").select("z_index").order("z_index", { ascending: false }).limit(1).maybeSingle();
+  const { error } = await supabase.from("pins").insert({
+    image_url: imageUrl,
+    memo: String(formData.get("memo") ?? "").trim() || null,
+    x: Number(formData.get("x") ?? 0.5),
+    y: Number(formData.get("y") ?? 0.45),
+    scale: Number(formData.get("scale") ?? 1),
+    rotation: Number(formData.get("rotation") ?? 0),
+    z_index: (top?.z_index ?? 0) + 1,
+    created_by: user.id,
+  });
+  if (error) return { error: `保存に失敗しました: ${error.message}` };
+  revalidateAll();
+}
+
+export async function updatePinLayoutAction(input: {
+  id: string;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  z_index: number;
+}) {
+  const user = await requireUser();
+  const supabase = await createUserClient();
+  const { error } = await supabase
+    .from("pins")
+    .update({
+      x: input.x,
+      y: input.y,
+      scale: input.scale,
+      rotation: input.rotation,
+      z_index: input.z_index,
+    })
+    .eq("id", input.id)
+    .eq("created_by", user.id);
+  if (error) throw new Error(`更新に失敗しました: ${error.message}`);
+}
+
+export async function deletePinAction(formData: FormData) {
+  await deleteOwn("pins", String(formData.get("id") ?? ""));
+}
+
 export async function recordHappenedAction(formData: FormData) {
   const user = await requireUser();
   const table = String(formData.get("table") ?? "") as ContentTable;

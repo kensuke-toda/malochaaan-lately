@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import type { Book, Intent, Movie, Place, Podcast, Post, Sound, Thing, Work } from "@/types";
+import type { Book, Intent, Movie, Pin, Place, Podcast, Post, Sound, Thing, Work } from "@/types";
 
 const PROFILE = "profiles(display_name)";
 
@@ -13,6 +13,7 @@ export type HomeData = {
   posts: Post[];
   movies: Movie[];
   works: Work[];
+  pins: Pin[];
 };
 
 export const emptyHomeData: HomeData = {
@@ -24,6 +25,7 @@ export const emptyHomeData: HomeData = {
   posts: [],
   movies: [],
   works: [],
+  pins: [],
 };
 
 function byIntent<T extends { intent?: Intent }>(rows: T[] | null, intent?: Intent) {
@@ -63,6 +65,11 @@ export async function fetchHomeData(options: { createdBy?: string; intent?: Inte
   }
 
   const [things, places, books, sounds, podcasts, posts, movies, works] = rows;
+  const pinsQuery = createdBy
+    ? supabase.from("pins").select(`*, ${PROFILE}`).eq("created_by", createdBy)
+    : supabase.from("pins").select(`*, ${PROFILE}`);
+  const pins = await pinsQuery.order("z_index").limit(48);
+
   return {
     things: byIntent(things.data as Thing[], intent),
     places: byIntent(places.data as Place[], intent),
@@ -72,5 +79,6 @@ export async function fetchHomeData(options: { createdBy?: string; intent?: Inte
     posts: byIntent(posts.data as Post[], intent),
     movies: byIntent(movies.data as Movie[], intent),
     works: byIntent(works.data as Work[], intent),
+    pins: pins.error ? [] : ((pins.data as Pin[]) ?? []),
   };
 }

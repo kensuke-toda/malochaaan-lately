@@ -173,13 +173,29 @@ create table if not exists movie_photos (
 );
 
 -- =========================================
+-- Pins（コルクボード）
+-- =========================================
+create table if not exists pins (
+  id uuid primary key default gen_random_uuid(),
+  image_url text not null,
+  memo text,
+  x double precision not null default 0.5,
+  y double precision not null default 0.5,
+  scale double precision not null default 1,
+  rotation double precision not null default 0,
+  z_index integer not null default 0,
+  created_by uuid not null references public.profiles(id),
+  created_at timestamptz not null default now()
+);
+
+-- =========================================
 -- RLS
 -- =========================================
 do $$
 declare
   t text;
 begin
-  foreach t in array array['things','posts','post_photos','places','books','sounds','works','podcasts','movies','movie_photos']
+  foreach t in array array['things','posts','post_photos','places','books','sounds','works','podcasts','movies','movie_photos','pins']
   loop
     execute format('alter table %I enable row level security', t);
   end loop;
@@ -196,6 +212,7 @@ drop policy if exists "works_public_read" on works;
 drop policy if exists "podcasts_public_read" on podcasts;
 drop policy if exists "movies_public_read" on movies;
 drop policy if exists "movie_photos_public_read" on movie_photos;
+drop policy if exists "pins_public_read" on pins;
 
 create policy "things_public_read" on things for select using (true);
 create policy "posts_public_read" on posts for select using (true);
@@ -207,6 +224,7 @@ create policy "works_public_read" on works for select using (true);
 create policy "podcasts_public_read" on podcasts for select using (true);
 create policy "movies_public_read" on movies for select using (true);
 create policy "movie_photos_public_read" on movie_photos for select using (true);
+create policy "pins_public_read" on pins for select using (true);
 
 drop policy if exists "things_insert_own" on things;
 drop policy if exists "posts_insert_own" on posts;
@@ -218,6 +236,7 @@ drop policy if exists "podcasts_insert_own" on podcasts;
 drop policy if exists "movies_insert_own" on movies;
 drop policy if exists "post_photos_insert_auth" on post_photos;
 drop policy if exists "movie_photos_insert_auth" on movie_photos;
+drop policy if exists "pins_insert_own" on pins;
 
 create policy "things_insert_own" on things for insert to authenticated with check (created_by = auth.uid());
 create policy "posts_insert_own" on posts for insert to authenticated with check (created_by = auth.uid());
@@ -233,6 +252,7 @@ create policy "post_photos_insert_auth" on post_photos for insert to authenticat
 create policy "movie_photos_insert_auth" on movie_photos for insert to authenticated with check (
   exists (select 1 from movies m where m.id = movie_id and m.created_by = auth.uid())
 );
+create policy "pins_insert_own" on pins for insert to authenticated with check (created_by = auth.uid());
 
 drop policy if exists "things_update_own" on things;
 drop policy if exists "posts_update_own" on posts;
@@ -242,6 +262,7 @@ drop policy if exists "sounds_update_own" on sounds;
 drop policy if exists "works_update_own" on works;
 drop policy if exists "podcasts_update_own" on podcasts;
 drop policy if exists "movies_update_own" on movies;
+drop policy if exists "pins_update_own" on pins;
 
 create policy "things_update_own" on things for update to authenticated using (created_by = auth.uid()) with check (created_by = auth.uid());
 create policy "posts_update_own" on posts for update to authenticated using (created_by = auth.uid()) with check (created_by = auth.uid());
@@ -251,6 +272,7 @@ create policy "sounds_update_own" on sounds for update to authenticated using (c
 create policy "works_update_own" on works for update to authenticated using (created_by = auth.uid()) with check (created_by = auth.uid());
 create policy "podcasts_update_own" on podcasts for update to authenticated using (created_by = auth.uid()) with check (created_by = auth.uid());
 create policy "movies_update_own" on movies for update to authenticated using (created_by = auth.uid()) with check (created_by = auth.uid());
+create policy "pins_update_own" on pins for update to authenticated using (created_by = auth.uid()) with check (created_by = auth.uid());
 
 drop policy if exists "things_delete_own" on things;
 drop policy if exists "posts_delete_own" on posts;
@@ -262,6 +284,7 @@ drop policy if exists "podcasts_delete_own" on podcasts;
 drop policy if exists "movies_delete_own" on movies;
 drop policy if exists "post_photos_delete_own" on post_photos;
 drop policy if exists "movie_photos_delete_own" on movie_photos;
+drop policy if exists "pins_delete_own" on pins;
 
 create policy "things_delete_own" on things for delete to authenticated using (created_by = auth.uid());
 create policy "posts_delete_own" on posts for delete to authenticated using (created_by = auth.uid());
@@ -277,6 +300,7 @@ create policy "post_photos_delete_own" on post_photos for delete to authenticate
 create policy "movie_photos_delete_own" on movie_photos for delete to authenticated using (
   exists (select 1 from movies m where m.id = movie_id and m.created_by = auth.uid())
 );
+create policy "pins_delete_own" on pins for delete to authenticated using (created_by = auth.uid());
 
 drop trigger if exists things_set_created_by on things;
 drop trigger if exists posts_set_created_by on posts;
@@ -286,6 +310,7 @@ drop trigger if exists sounds_set_created_by on sounds;
 drop trigger if exists works_set_created_by on works;
 drop trigger if exists podcasts_set_created_by on podcasts;
 drop trigger if exists movies_set_created_by on movies;
+drop trigger if exists pins_set_created_by on pins;
 
 create trigger things_set_created_by before insert on things for each row execute function public.set_created_by();
 create trigger posts_set_created_by before insert on posts for each row execute function public.set_created_by();
@@ -295,6 +320,7 @@ create trigger sounds_set_created_by before insert on sounds for each row execut
 create trigger works_set_created_by before insert on works for each row execute function public.set_created_by();
 create trigger podcasts_set_created_by before insert on podcasts for each row execute function public.set_created_by();
 create trigger movies_set_created_by before insert on movies for each row execute function public.set_created_by();
+create trigger pins_set_created_by before insert on pins for each row execute function public.set_created_by();
 
 -- =========================================
 -- Storage
@@ -307,24 +333,25 @@ values
   ('sounds-images', 'sounds-images', true),
   ('posts-images', 'posts-images', true),
   ('podcasts-images', 'podcasts-images', true),
-  ('movies-images', 'movies-images', true)
+  ('movies-images', 'movies-images', true),
+  ('pins-images', 'pins-images', true)
 on conflict (id) do nothing;
 
 drop policy if exists "public_read_lately_images" on storage.objects;
 create policy "public_read_lately_images" on storage.objects
   for select using (
-    bucket_id in ('things-images','places-images','books-images','sounds-images','posts-images','podcasts-images','movies-images')
+    bucket_id in ('things-images','places-images','books-images','sounds-images','posts-images','podcasts-images','movies-images','pins-images')
   );
 
 drop policy if exists "auth_upload_lately_images" on storage.objects;
 create policy "auth_upload_lately_images" on storage.objects
   for insert to authenticated with check (
-    bucket_id in ('things-images','places-images','books-images','sounds-images','posts-images','podcasts-images','movies-images')
+    bucket_id in ('things-images','places-images','books-images','sounds-images','posts-images','podcasts-images','movies-images','pins-images')
   );
 
 drop policy if exists "auth_delete_own_lately_images" on storage.objects;
 create policy "auth_delete_own_lately_images" on storage.objects
   for delete to authenticated using (
-    bucket_id in ('things-images','places-images','books-images','sounds-images','posts-images','podcasts-images','movies-images')
+    bucket_id in ('things-images','places-images','books-images','sounds-images','posts-images','podcasts-images','movies-images','pins-images')
     and owner = auth.uid()
   );
