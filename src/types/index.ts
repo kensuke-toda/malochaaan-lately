@@ -23,6 +23,7 @@ export type Thing = {
 export type Place = {
   id: string;
   name: string;
+  area: string | null;
   visited_date: string | null;
   image_url: string | null;
   memo: string | null;

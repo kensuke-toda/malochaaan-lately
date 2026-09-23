@@ -156,6 +156,7 @@ export async function createPlaceAction(formData: FormData) {
   const supabase = await createUserClient();
   const { error } = await insertContent(supabase, "places", {
     name,
+    area: String(formData.get("area") ?? "").trim() || null,
     visited_date: intent === "want" ? WANT_DATE : String(formData.get("visited_date") ?? "") || todayKey(),
     memo: markWantText(String(formData.get("memo") ?? "").trim() || null, intent === "want"),
     image_url: imageUrl,

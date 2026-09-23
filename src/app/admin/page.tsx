@@ -65,7 +65,7 @@ export default async function AdminPage() {
         title="Places"
         rows={data.places.map((p) => ({
           id: p.id,
-          label: `${isWantRow(p) ? "これから ・ " : ""}${p.visited_date && !isWantDate(p.visited_date) ? `${formatDate(p.visited_date)} ・ ` : ""}${p.name}`,
+          label: `${isWantRow(p) ? "これから ・ " : ""}${p.visited_date && !isWantDate(p.visited_date) ? `${formatDate(p.visited_date)} ・ ` : ""}${p.name}${p.area ? ` ・ ${p.area}` : ""}`,
           mine: p.created_by === user.id,
         }))}
         action={deletePlaceAction}

@@ -153,10 +153,16 @@ export function HomeClient({
                       <div className="relative flex aspect-[4/3] w-full flex-col justify-end overflow-hidden rounded-xl bg-[#F4EEE4] p-3">
                         <AuthorTag name={authorName(place)} className="absolute left-1.5 top-1.5 bg-[#E8DFD0]" />
                         <p className="font-display font-semibold leading-snug">{place.name}</p>
+                        {place.area ? <p className="mt-1 text-xs text-[#6B6258]">{place.area}</p> : null}
                         {place.memo ? <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-[#6B6258]">{place.memo}</p> : null}
                       </div>
                     )}
-                    {place.image_url ? <p className="mt-2 text-sm">{place.name}</p> : null}
+                    {place.image_url ? (
+                      <>
+                        <p className="mt-2 text-sm">{place.name}</p>
+                        {place.area ? <p className="text-xs text-[#6B6258]">{place.area}</p> : null}
+                      </>
+                    ) : null}
                   </Link>
                   {canRecord(place) ? <RecordForm table="places" id={place.id} /> : null}
                 </div>
@@ -461,6 +467,7 @@ export function HomeClient({
                   {authorName(photoItem)} ・ {cursor.year}年{cursor.month + 1}月{photo.day}日
                 </p>
                 <h3 className="font-display text-lg font-semibold">{photoItem.name}</h3>
+                {photoItem.area ? <p className="text-xs text-[#6B6258]">{photoItem.area}</p> : null}
               </div>
               <button type="button" onClick={() => setPhoto(null)} className="text-[#6B6258]">
                 ✕
@@ -580,7 +587,10 @@ function DayList({
   bundle: DayBundle;
 }) {
   const rows: { href: string; label: string }[] = [
-    ...bundle.places.map((p) => ({ href: `/places/${p.id}`, label: `行った場所：${p.name}` })),
+    ...bundle.places.map((p) => ({
+      href: `/places/${p.id}`,
+      label: `行った場所：${p.name}${p.area ? `（${p.area}）` : ""}`,
+    })),
     ...bundle.things.map((p) => ({ href: `/things/${p.id}`, label: `モノ：${p.name}` })),
     ...bundle.books.map((p) => ({ href: `/books/${p.id}`, label: `読んだ本：${p.title}` })),
     ...bundle.movies.map((p) => ({ href: `/movies/${p.id}`, label: `映画：${p.title}` })),

@@ -31,6 +31,7 @@ export default async function PlaceDetailPage({ params }: { params: Promise<{ id
         {isWantRow(place) ? " ・ これから行きたい" : place.visited_date && !isWantDate(place.visited_date) ? ` ・ ${formatDate(place.visited_date)}` : ""}
       </p>
       <h1 className="mt-1 font-display text-2xl font-semibold break-words">{place.name}</h1>
+      {place.area ? <p className="mt-1 text-sm text-[#6B6258]">{place.area}</p> : null}
       {stripWantMark(place.memo) ? (
         <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-[#3D362E]">{stripWantMark(place.memo)}</p>
       ) : null}

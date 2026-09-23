@@ -213,6 +213,7 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
           {kind === "place" && (
             <>
               <input name="name" required placeholder="店名（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <input name="area" placeholder="エリア・最寄り" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               {want ? null : (
                 <input name="visited_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               )}
