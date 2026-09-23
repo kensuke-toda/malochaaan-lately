@@ -19,6 +19,34 @@ function parseIntent(formData: FormData): Intent {
   return formData.get("intent") === "want" ? "want" : "happened";
 }
 
+function missingColumn(error: { message?: string } | null | undefined, column: string) {
+  const msg = (error?.message ?? "").toLowerCase();
+  return msg.includes(column) && (msg.includes("schema cache") || msg.includes("could not find"));
+}
+
+async function insertContent(
+  supabase: Awaited<ReturnType<typeof createUserClient>>,
+  table: ContentTable,
+  row: Record<string, unknown>,
+  select = false,
+) {
+  const run = (payload: Record<string, unknown>) =>
+    select ? supabase.from(table).insert(payload).select().single() : supabase.from(table).insert(payload);
+
+  let payload = { ...row };
+  let result = await run(payload);
+  if (missingColumn(result.error, "intent") && "intent" in payload) {
+    const { intent: _intent, ...rest } = payload;
+    payload = rest;
+    result = await run(payload);
+  }
+  if (table === "posts" && result.error?.message.toLowerCase().includes("title")) {
+    payload = { ...payload, title: payload.body };
+    result = await run(payload);
+  }
+  return result;
+}
+
 export type BookLookupResult = {
   title: string;
   author: string;
@@ -67,7 +95,7 @@ export async function createThingAction(formData: FormData) {
     }
   }
   const supabase = await createUserClient();
-  const { error } = await supabase.from("things").insert({
+  const { error } = await insertContent(supabase, "things", {
     name,
     brand: String(formData.get("brand") ?? "").trim() || null,
     product_url: String(formData.get("product_url") ?? "").trim() || null,
@@ -95,7 +123,7 @@ export async function createPlaceAction(formData: FormData) {
   }
   const intent = parseIntent(formData);
   const supabase = await createUserClient();
-  const { error } = await supabase.from("places").insert({
+  const { error } = await insertContent(supabase, "places", {
     name,
     visited_date: intent === "want" ? null : String(formData.get("visited_date") ?? "") || todayKey(),
     memo: String(formData.get("memo") ?? "").trim() || null,
@@ -155,7 +183,7 @@ export async function createBookAction(formData: FormData) {
   const intent = parseIntent(formData);
   const status = String(formData.get("status") ?? (intent === "want" ? "reading" : "finished"));
   const supabase = await createUserClient();
-  const { error } = await supabase.from("books").insert({
+  const { error } = await insertContent(supabase, "books", {
     title,
     author: String(formData.get("author") ?? "").trim() || null,
     status: status === "reading" ? "reading" : "finished",
@@ -182,7 +210,7 @@ export async function createSoundAction(formData: FormData) {
     }
   }
   const supabase = await createUserClient();
-  const { error } = await supabase.from("sounds").insert({
+  const { error } = await insertContent(supabase, "sounds", {
     title,
     artist: String(formData.get("artist") ?? "").trim() || null,
     url: String(formData.get("url") ?? "").trim() || null,
@@ -209,7 +237,7 @@ export async function createPodcastAction(formData: FormData) {
     }
   }
   const supabase = await createUserClient();
-  const { error } = await supabase.from("podcasts").insert({
+  const { error } = await insertContent(supabase, "podcasts", {
     title,
     artist: String(formData.get("artist") ?? "").trim() || null,
     url: String(formData.get("url") ?? "").trim() || null,
@@ -227,16 +255,17 @@ export async function createPostAction(formData: FormData) {
   const body = String(formData.get("body") ?? "").trim();
   if (!body) return { error: "本文は必須です" };
   const supabase = await createUserClient();
-  const row = {
-    body,
-    entry_date: String(formData.get("entry_date") ?? "") || todayKey(),
-    intent: parseIntent(formData),
-    created_by: user.id,
-  };
-  let { data: post, error } = await supabase.from("posts").insert(row).select().single();
-  if (error?.message?.toLowerCase().includes("title")) {
-    ({ data: post, error } = await supabase.from("posts").insert({ ...row, title: body }).select().single());
-  }
+  const { data: post, error } = await insertContent(
+    supabase,
+    "posts",
+    {
+      body,
+      entry_date: String(formData.get("entry_date") ?? "") || todayKey(),
+      intent: parseIntent(formData),
+      created_by: user.id,
+    },
+    true,
+  );
   if (error || !post) return { error: `保存に失敗しました: ${error?.message}` };
 
   const photos = formData
@@ -273,7 +302,7 @@ export async function createMovieAction(formData: FormData) {
     }
   }
   const supabase = await createUserClient();
-  const { error } = await supabase.from("movies").insert({
+  const { error } = await insertContent(supabase, "movies", {
     title,
     body: String(formData.get("body") ?? "").trim() || null,
     image_url: imageUrl,
@@ -289,7 +318,7 @@ export async function createWorkAction(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { error: "タイトルは必須です" };
   const supabase = await createUserClient();
-  const { error } = await supabase.from("works").insert({
+  const { error } = await insertContent(supabase, "works", {
     title,
     period_label: String(formData.get("period_label") ?? "").trim() || null,
     summary: String(formData.get("summary") ?? "").trim() || null,
@@ -421,7 +450,15 @@ export async function recordHappenedAction(formData: FormData) {
   if (table === "posts" || table === "movies") extra.entry_date = todayKey();
 
   const supabase = await createUserClient();
-  const { error } = await supabase.from(table).update(extra).eq("id", id).eq("created_by", user.id);
+  let { error } = await supabase.from(table).update(extra).eq("id", id).eq("created_by", user.id);
+  if (missingColumn(error, "intent") && "intent" in extra) {
+    const { intent: _intent, ...rest } = extra;
+    if (Object.keys(rest).length) {
+      ({ error } = await supabase.from(table).update(rest).eq("id", id).eq("created_by", user.id));
+    } else {
+      error = null;
+    }
+  }
   if (error) throw new Error(`更新に失敗しました: ${error.message}`);
   revalidateAll();
 }
