@@ -338,7 +338,7 @@ export async function createPinAction(formData: FormData) {
   if (!(image instanceof File) || image.size === 0) return { error: "写真は必須です" };
   let imageUrl: string;
   try {
-    imageUrl = await uploadImage("pins-images", image);
+    imageUrl = await uploadImage("things-images", image);
   } catch (e) {
     return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
   }
