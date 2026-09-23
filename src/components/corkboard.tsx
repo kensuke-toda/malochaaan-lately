@@ -84,13 +84,25 @@ export function Corkboard({
   );
   const many = boards.length > 1;
   const [locked, setLocked] = useState(false);
+  const [adding, setAdding] = useState(false);
 
   return (
     <section id="cork" className="mb-16">
-      <h2 className="mb-4 font-display text-xl font-semibold">Cork</h2>
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <h2 className="font-display text-xl font-semibold">Cork</h2>
+        {loggedIn ? (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="shrink-0 rounded-full bg-[#B85C38] px-3 py-1.5 text-xs font-semibold text-[#F4EEE4]"
+          >
+            ＋ 貼る
+          </button>
+        ) : null}
+      </div>
       <div
         data-no-tab-swipe
-        className={`flex snap-x snap-mandatory gap-4 overscroll-x-contain pb-1 [scrollbar-width:thin]${locked ? " overflow-hidden" : " overflow-x-auto"}`}
+        className={`flex items-start snap-x snap-mandatory gap-4 overscroll-x-contain pb-1 [scrollbar-width:thin]${locked ? " overflow-hidden" : " overflow-x-auto"}`}
       >
         {boards.map((board) => (
           <div
@@ -101,6 +113,14 @@ export function Corkboard({
           </div>
         ))}
       </div>
+      {adding ? (
+        <AddPinModal
+          onClose={() => setAdding(false)}
+          defaultX={0.28 + Math.random() * 0.44}
+          defaultY={0.32 + Math.random() * 0.36}
+          defaultRotation={Math.round((Math.random() - 0.5) * 22)}
+        />
+      ) : null}
     </section>
   );
 }
@@ -121,7 +141,6 @@ function CorkPane({
   const boardRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [dragging, setDragging] = useState<string | null>(null);
   const [removed, setRemoved] = useState<Record<string, true>>({});
@@ -242,19 +261,6 @@ function CorkPane({
 
   return (
     <div ref={paneRef}>
-      <div className="mb-2 flex items-end justify-between gap-3">
-        <p className="min-w-0 truncate text-xs text-[#6B6258]">{board.name}</p>
-        {mine ? (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="shrink-0 rounded-full bg-[#B85C38] px-3 py-1.5 text-xs font-semibold text-[#F4EEE4]"
-          >
-            ＋ 貼る
-          </button>
-        ) : null}
-      </div>
-
       <div
         ref={boardRef}
         data-allow-multitouch={editing ? "" : undefined}
@@ -273,6 +279,9 @@ function CorkPane({
           if (mine && !editing) setEditing(true);
         }}
       >
+        <span className="pointer-events-none absolute bottom-2 left-2 z-20 rounded-full bg-[#F4EEE4]/90 px-2 py-0.5 text-[10px] text-[#2F2A24]">
+          {board.name}
+        </span>
         {shown.map((pin) => {
           const on = selected === pin.id;
           return (
@@ -357,15 +366,6 @@ function CorkPane({
         >
           選んだステッカーを外す
         </button>
-      ) : null}
-
-      {adding ? (
-        <AddPinModal
-          onClose={() => setAdding(false)}
-          defaultX={0.28 + Math.random() * 0.44}
-          defaultY={0.32 + Math.random() * 0.36}
-          defaultRotation={Math.round((Math.random() - 0.5) * 22)}
-        />
       ) : null}
     </div>
   );
