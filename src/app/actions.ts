@@ -365,7 +365,6 @@ export async function createPinAction(formData: FormData) {
     memo,
     original_image_url: imageUrl,
     sort_order: (top?.sort_order ?? 0) + 1,
-    intent: "happened",
     created_by: user.id,
   });
   if (error) return { error: `保存に失敗しました: ${error.message}` };
