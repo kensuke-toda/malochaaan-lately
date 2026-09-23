@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { createPinAction, deletePinAction, updatePinLayoutAction } from "@/app/actions";
 import { authorName } from "@/lib/utils";
 import type { Pin } from "@/types";
@@ -45,6 +45,7 @@ export function Corkboard({
   userId: string | null;
   loggedIn: boolean;
 }) {
+  const sectionRef = useRef<HTMLElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
@@ -55,6 +56,19 @@ export function Corkboard({
   const draftsRef = useRef(drafts);
   draftsRef.current = drafts;
   const nextZ = useRef(Math.max(0, ...pins.map((p) => p.z_index)) + 1);
+
+  useEffect(() => {
+    if (!editing) return;
+    function onDocPointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (sectionRef.current?.contains(target)) return;
+      setEditing(false);
+      setSelected(null);
+    }
+    document.addEventListener("pointerdown", onDocPointerDown);
+    return () => document.removeEventListener("pointerdown", onDocPointerDown);
+  }, [editing]);
 
   const shown = pins
     .filter((pin) => !removed[pin.id])
@@ -150,31 +164,26 @@ export function Corkboard({
   }
 
   return (
-    <section id="cork" className="mb-16">
+    <section id="cork" ref={sectionRef} className="mb-16">
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h2 className="font-display text-xl font-semibold">Cork</h2>
           <p className="text-xs text-[#6B6258]">
-            {loggedIn && !editing ? "ボードをタップすると並べられる。" : "もらったステッカーを、ここに貼る。"}
+            {loggedIn
+              ? editing
+                ? "ボードの外をタップすると終わる。"
+                : "ボードをタップすると並べられる。"
+              : "もらったステッカーを、ここに貼る。"}
           </p>
         </div>
         {loggedIn ? (
-          <div className="flex shrink-0 gap-2">
-            <button
-              type="button"
-              onClick={() => setEditing((v) => !v)}
-              className="rounded-full bg-[#E8DFD0] px-3 py-1.5 text-xs font-semibold text-[#2F2A24]"
-            >
-              {editing ? "完了" : "並べる"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setAdding(true)}
-              className="rounded-full bg-[#B85C38] px-3 py-1.5 text-xs font-semibold text-[#F4EEE4]"
-            >
-              ＋ 貼る
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="shrink-0 rounded-full bg-[#B85C38] px-3 py-1.5 text-xs font-semibold text-[#F4EEE4]"
+          >
+            ＋ 貼る
+          </button>
         ) : null}
       </div>
 
