@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
 import { BottomNav } from "@/components/bottom-nav";
+import { TabPreviewProvider } from "@/components/tab-preview";
 import { TabSwipe } from "@/components/tab-swipe";
 
 function useLockPageZoom() {
@@ -46,12 +47,14 @@ export function AppFrame({
   }
 
   return (
-    <div className="min-h-full w-full">
-      <AppHeader loggedIn={loggedIn} />
-      <main className="mx-auto w-full max-w-3xl px-4 py-5 pb-28 sm:pb-8">
-        <TabSwipe>{children}</TabSwipe>
-      </main>
-      <BottomNav loggedIn={loggedIn} />
-    </div>
+    <TabPreviewProvider>
+      <div className="min-h-full w-full">
+        <AppHeader loggedIn={loggedIn} />
+        <main className="mx-auto w-full max-w-3xl px-4 py-5 pb-28 sm:pb-8">
+          <TabSwipe>{children}</TabSwipe>
+        </main>
+        <BottomNav loggedIn={loggedIn} />
+      </div>
+    </TabPreviewProvider>
   );
 }

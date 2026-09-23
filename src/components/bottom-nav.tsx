@@ -3,20 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarDays, Sparkles, UserRound } from "lucide-react";
+import { useTabPreview } from "@/components/tab-preview";
 import { cn } from "@/lib/utils";
 
 export function BottomNav({ loggedIn }: { loggedIn: boolean }) {
   const pathname = usePathname();
+  const { tab, previewTab } = useTabPreview();
   const meHref = loggedIn ? "/admin" : "/login";
-  const soonActive = pathname === "/soon";
-  const meActive = pathname.startsWith("/admin") || pathname.startsWith("/login");
-  const happenedActive = !soonActive && !meActive;
+  const soonActive = tab === "/soon";
+  const meActive = tab == null && (pathname.startsWith("/admin") || pathname.startsWith("/login"));
+  const happenedActive = tab === "/" || (tab == null && !meActive);
 
   return (
     <nav className="glass-surface fixed inset-x-0 bottom-0 z-40 border-t border-[#2F2A24]/10 pb-[env(safe-area-inset-bottom)] sm:hidden">
       <div className="mx-auto flex w-full max-w-3xl items-stretch justify-around">
         <Link
           href="/"
+          scroll={false}
+          prefetch
+          onClick={() => previewTab("/")}
           className={cn(
             "flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-[13px] font-medium",
             happenedActive ? "text-[#B85C38]" : "text-[#6B6258]",
@@ -27,6 +32,9 @@ export function BottomNav({ loggedIn }: { loggedIn: boolean }) {
         </Link>
         <Link
           href="/soon"
+          scroll={false}
+          prefetch
+          onClick={() => previewTab("/soon")}
           className={cn(
             "flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-[13px] font-medium",
             soonActive ? "text-[#B85C38]" : "text-[#6B6258]",

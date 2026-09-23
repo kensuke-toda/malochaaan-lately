@@ -1,9 +1,10 @@
 import "server-only";
+import { cache } from "react";
 import { createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { SessionUser } from "@/types";
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   if (!isSupabaseConfigured()) return null;
   const supabase = await createUserClient();
   const {
@@ -22,4 +23,4 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     email: user.email ?? null,
     displayName: profile?.display_name ?? user.email?.split("@")[0] ?? "メンバー",
   };
-}
+});
