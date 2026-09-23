@@ -9,6 +9,7 @@ import { fetchOpenBdBook } from "@/lib/books/openbd";
 import { isBookIsbn, normalizeIsbn } from "@/lib/books/isbn";
 import { createUserClient } from "@/lib/supabase/server";
 import type { Intent } from "@/types";
+import { CORK_BRAND } from "@/lib/data";
 import { todayKey } from "@/lib/utils";
 
 const CONTENT_TABLES = ["things", "places", "books", "sounds", "podcasts", "posts", "movies", "works"] as const;
@@ -342,16 +343,29 @@ export async function createPinAction(formData: FormData) {
   } catch (e) {
     return { error: e instanceof Error ? e.message : "画像のアップロードに失敗しました" };
   }
-  const supabase = await createUserClient();
-  const { data: top } = await supabase.from("pins").select("z_index").order("z_index", { ascending: false }).limit(1).maybeSingle();
-  const { error } = await supabase.from("pins").insert({
-    image_url: imageUrl,
-    memo: String(formData.get("memo") ?? "").trim() || null,
+  const memo = String(formData.get("memo") ?? "").trim() || null;
+  const layout = JSON.stringify({
     x: Number(formData.get("x") ?? 0.5),
     y: Number(formData.get("y") ?? 0.45),
     scale: Number(formData.get("scale") ?? 1),
     rotation: Number(formData.get("rotation") ?? 0),
-    z_index: (top?.z_index ?? 0) + 1,
+  });
+  const supabase = await createUserClient();
+  const { data: top } = await supabase
+    .from("things")
+    .select("sort_order")
+    .eq("brand", CORK_BRAND)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const { error } = await supabase.from("things").insert({
+    name: memo || "ステッカー",
+    brand: CORK_BRAND,
+    product_url: layout,
+    memo,
+    original_image_url: imageUrl,
+    sort_order: (top?.sort_order ?? 0) + 1,
+    intent: "happened",
     created_by: user.id,
   });
   if (error) return { error: `保存に失敗しました: ${error.message}` };
@@ -369,21 +383,33 @@ export async function updatePinLayoutAction(input: {
   const user = await requireUser();
   const supabase = await createUserClient();
   const { error } = await supabase
-    .from("pins")
+    .from("things")
     .update({
-      x: input.x,
-      y: input.y,
-      scale: input.scale,
-      rotation: input.rotation,
-      z_index: input.z_index,
+      product_url: JSON.stringify({
+        x: input.x,
+        y: input.y,
+        scale: input.scale,
+        rotation: input.rotation,
+      }),
+      sort_order: input.z_index,
     })
     .eq("id", input.id)
+    .eq("brand", CORK_BRAND)
     .eq("created_by", user.id);
   if (error) throw new Error(`更新に失敗しました: ${error.message}`);
 }
 
 export async function deletePinAction(formData: FormData) {
-  await deleteOwn("pins", String(formData.get("id") ?? ""));
+  const user = await requireUser();
+  const supabase = await createUserClient();
+  const { error } = await supabase
+    .from("things")
+    .delete()
+    .eq("id", String(formData.get("id") ?? ""))
+    .eq("brand", CORK_BRAND)
+    .eq("created_by", user.id);
+  if (error) throw new Error(`削除に失敗しました: ${error.message}`);
+  revalidateAll();
 }
 
 export async function recordHappenedAction(formData: FormData) {

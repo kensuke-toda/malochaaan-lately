@@ -3,6 +3,35 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { Book, Intent, Movie, Pin, Place, Podcast, Post, Sound, Thing, Work } from "@/types";
 
 const PROFILE = "profiles(display_name)";
+export const CORK_BRAND = "__cork__";
+
+function parseCorkLayout(raw: string | null) {
+  try {
+    const value = raw ? JSON.parse(raw) : {};
+    return {
+      x: typeof value.x === "number" ? value.x : 0.5,
+      y: typeof value.y === "number" ? value.y : 0.45,
+      scale: typeof value.scale === "number" ? value.scale : 1,
+      rotation: typeof value.rotation === "number" ? value.rotation : 0,
+    };
+  } catch {
+    return { x: 0.5, y: 0.45, scale: 1, rotation: 0 };
+  }
+}
+
+export function thingToPin(thing: Thing): Pin {
+  const layout = parseCorkLayout(thing.product_url);
+  return {
+    id: thing.id,
+    image_url: thing.processed_image_url ?? thing.original_image_url ?? "",
+    memo: thing.memo,
+    ...layout,
+    z_index: thing.sort_order,
+    created_by: thing.created_by,
+    created_at: thing.created_at,
+    profiles: thing.profiles,
+  };
+}
 
 export type HomeData = {
   things: Thing[];
@@ -65,13 +94,14 @@ export async function fetchHomeData(options: { createdBy?: string; intent?: Inte
   }
 
   const [things, places, books, sounds, podcasts, posts, movies, works] = rows;
-  const pinsQuery = createdBy
-    ? supabase.from("pins").select(`*, ${PROFILE}`).eq("created_by", createdBy)
-    : supabase.from("pins").select(`*, ${PROFILE}`);
-  const pins = await pinsQuery.order("z_index").limit(48);
+  const corkQuery = createdBy
+    ? supabase.from("things").select(`*, ${PROFILE}`).eq("created_by", createdBy).eq("brand", CORK_BRAND)
+    : supabase.from("things").select(`*, ${PROFILE}`).eq("brand", CORK_BRAND);
+  const cork = await corkQuery.order("sort_order").limit(48);
+  const thingRows = byIntent((things.data as Thing[]) ?? [], intent).filter((row) => row.brand !== CORK_BRAND);
 
   return {
-    things: byIntent(things.data as Thing[], intent),
+    things: thingRows,
     places: byIntent(places.data as Place[], intent),
     books: byIntent(books.data as Book[], intent),
     sounds: byIntent(sounds.data as Sound[], intent),
@@ -79,6 +109,6 @@ export async function fetchHomeData(options: { createdBy?: string; intent?: Inte
     posts: byIntent(posts.data as Post[], intent),
     movies: byIntent(movies.data as Movie[], intent),
     works: byIntent(works.data as Work[], intent),
-    pins: pins.error ? [] : ((pins.data as Pin[]) ?? []),
+    pins: ((cork.data as Thing[]) ?? []).map(thingToPin),
   };
 }

@@ -280,6 +280,7 @@ function AddPinModal({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [fileHint, setFileHint] = useState("まだ選んでいません");
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -326,8 +327,19 @@ function AddPinModal({
         <input type="hidden" name="rotation" value={defaultRotation} />
         <div className="flex flex-col gap-3">
           <label className="relative flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[#2F2A24]/30 bg-[#E8DFD0] px-3 py-4 text-center">
-            <span className="text-sm font-medium">写真を選択（透過PNG向き）</span>
-            <input name="image" type="file" accept="image/*" required className="absolute inset-0 cursor-pointer opacity-0" />
+            <span className="text-sm font-medium">写真を選択</span>
+            <span className="max-w-full truncate text-xs text-[#6B6258]">{fileHint}</span>
+            <input
+              name="image"
+              type="file"
+              accept="image/*"
+              required
+              className="absolute inset-0 cursor-pointer opacity-0"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                setFileHint(file ? file.name : "まだ選んでいません");
+              }}
+            />
           </label>
           <input name="memo" placeholder="メモ（任意）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
           {error ? <p className="text-sm text-[#B85C38]">{error}</p> : null}
