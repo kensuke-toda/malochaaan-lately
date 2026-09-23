@@ -50,6 +50,7 @@ export function Corkboard({
   const [selected, setSelected] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const [dragging, setDragging] = useState<string | null>(null);
   const draftsRef = useRef(drafts);
   draftsRef.current = drafts;
   const nextZ = useRef(Math.max(0, ...pins.map((p) => p.z_index)) + 1);
@@ -102,6 +103,7 @@ export function Corkboard({
     const z = nextZ.current++;
     patch(id, { z_index: z });
     setSelected(id);
+    setDragging(id);
 
     const origin = {
       x: event.clientX,
@@ -136,6 +138,7 @@ export function Corkboard({
     const onUp = () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      setDragging(null);
       void persist(id);
     };
 
@@ -178,8 +181,9 @@ export function Corkboard({
         ref={boardRef}
         data-no-tab-swipe
         data-allow-multitouch={editing ? "" : undefined}
-        className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-inner sm:aspect-[16/10]"
+        className="relative isolate aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-inner sm:aspect-[16/10]"
         style={{
+          contain: "paint",
           backgroundColor: "#C4A574",
           backgroundImage:
             "radial-gradient(circle at 20% 30%, rgba(90,60,30,0.18) 1.2px, transparent 1.4px), radial-gradient(circle at 70% 60%, rgba(70,45,20,0.16) 1px, transparent 1.2px), radial-gradient(circle at 40% 80%, rgba(110,75,40,0.2) 0.8px, transparent 1px), linear-gradient(135deg, #d2b48c 0%, #c4a574 40%, #b8956a 100%)",
@@ -205,9 +209,12 @@ export function Corkboard({
                 left: `${pin.x * 100}%`,
                 top: `${pin.y * 100}%`,
                 width: "22%",
-                transform: `translate(-50%, -50%) rotate(${pin.rotation}deg) scale(${pin.scale})`,
+                transform: `translate3d(-50%, -50%, 0) rotate(${pin.rotation}deg) scale(${pin.scale})`,
+                transformOrigin: "center center",
                 zIndex: pin.z_index,
                 touchAction: editing && mine ? "none" : "auto",
+                willChange: dragging === pin.id ? "transform" : undefined,
+                backfaceVisibility: "hidden",
               }}
               onPointerDown={(e) => {
                 e.stopPropagation();
@@ -219,7 +226,7 @@ export function Corkboard({
                 <img
                   src={pin.image_url}
                   alt={pin.memo ?? "ステッカー"}
-                  className="block h-auto w-full drop-shadow-[2px_6px_8px_rgba(47,42,36,0.35)]"
+                  className="block h-auto w-full rounded-sm shadow-[2px_4px_10px_rgba(47,42,36,0.28)]"
                   draggable={false}
                 />
                 {!editing ? (
