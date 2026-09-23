@@ -85,28 +85,55 @@ export function Corkboard({
   const many = boards.length > 1;
   const [locked, setLocked] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [activeId, setActiveId] = useState(boards[0]?.ownerId ?? null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const showAdd = Boolean(loggedIn && userId && activeId === userId);
+
+  useEffect(() => {
+    const root = scrollerRef.current;
+    if (!root) return;
+    const panes = [...root.children];
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        const id = visible?.target.getAttribute("data-owner");
+        if (id) setActiveId(id);
+      },
+      { root, threshold: 0.55 },
+    );
+    panes.forEach((pane) => io.observe(pane));
+    return () => io.disconnect();
+  }, [boards]);
 
   return (
     <section id="cork" className="mb-16">
-      <div className="mb-4 flex items-end justify-between gap-3">
+      <div className="mb-4 flex min-h-8 items-end justify-between gap-3">
         <h2 className="font-display text-xl font-semibold">Cork</h2>
         {loggedIn ? (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="shrink-0 rounded-full bg-[#B85C38] px-3 py-1.5 text-xs font-semibold text-[#F4EEE4]"
-          >
-            ＋ 貼る
-          </button>
+          showAdd ? (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="shrink-0 rounded-full bg-[#B85C38] px-3 py-1.5 text-xs font-semibold text-[#F4EEE4]"
+            >
+              ＋ 貼る
+            </button>
+          ) : (
+            <span className="invisible shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold">＋ 貼る</span>
+          )
         ) : null}
       </div>
       <div
+        ref={scrollerRef}
         data-no-tab-swipe
         className={`flex items-start snap-x snap-mandatory gap-4 overscroll-x-contain pb-1 [scrollbar-width:thin]${locked ? " overflow-hidden" : " overflow-x-auto"}`}
       >
         {boards.map((board) => (
           <div
             key={board.ownerId}
+            data-owner={board.ownerId}
             className={many ? "w-[calc(100%-1.25rem)] shrink-0 snap-start" : "w-full shrink-0 snap-start"}
           >
             <CorkPane board={board} userId={userId} loggedIn={loggedIn} onEditingChange={setLocked} />
