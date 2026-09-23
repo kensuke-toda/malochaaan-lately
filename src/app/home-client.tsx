@@ -120,7 +120,15 @@ export function HomeClient({
         </div>
       )}
 
-      {!want ? <Corkboard pins={data.pins} userId={userId} loggedIn={loggedIn} /> : null}
+      {!want ? (
+        <Corkboard
+          pins={everyone.pins}
+          profiles={everyone.profiles}
+          userId={userId}
+          displayName={displayName}
+          loggedIn={loggedIn}
+        />
+      ) : null}
 
       <section id="places" className="mb-16">
         <SectionHead

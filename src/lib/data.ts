@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import type { Book, Intent, Movie, Pin, Place, Podcast, Post, Sound, Thing, Work } from "@/types";
+import type { Book, Intent, Movie, Pin, Place, Podcast, Post, Profile, Sound, Thing, Work } from "@/types";
 
 const PROFILE = "profiles(display_name)";
 export const CORK_BRAND = "__cork__";
@@ -43,6 +43,7 @@ export type HomeData = {
   movies: Movie[];
   works: Work[];
   pins: Pin[];
+  profiles: Profile[];
 };
 
 export const emptyHomeData: HomeData = {
@@ -55,6 +56,7 @@ export const emptyHomeData: HomeData = {
   movies: [],
   works: [],
   pins: [],
+  profiles: [],
 };
 
 function byIntent<T extends { intent?: Intent }>(rows: T[] | null, intent?: Intent) {
@@ -94,10 +96,10 @@ export async function fetchHomeData(options: { createdBy?: string; intent?: Inte
   }
 
   const [things, places, books, sounds, podcasts, posts, movies, works] = rows;
-  const corkQuery = createdBy
-    ? supabase.from("things").select(`*, ${PROFILE}`).eq("created_by", createdBy).eq("brand", CORK_BRAND)
-    : supabase.from("things").select(`*, ${PROFILE}`).eq("brand", CORK_BRAND);
-  const cork = await corkQuery.order("sort_order").limit(48);
+  const [cork, profiles] = await Promise.all([
+    supabase.from("things").select(`*, ${PROFILE}`).eq("brand", CORK_BRAND).order("sort_order").limit(96),
+    supabase.from("profiles").select("id, display_name").order("display_name"),
+  ]);
   const thingRows = byIntent((things.data as Thing[]) ?? [], intent).filter((row) => row.brand !== CORK_BRAND);
 
   return {
@@ -110,5 +112,6 @@ export async function fetchHomeData(options: { createdBy?: string; intent?: Inte
     movies: byIntent(movies.data as Movie[], intent),
     works: byIntent(works.data as Work[], intent),
     pins: ((cork.data as Thing[]) ?? []).map(thingToPin),
+    profiles: (profiles.data as Profile[]) ?? [],
   };
 }

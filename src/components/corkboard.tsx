@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { createPinAction, deletePinAction, updatePinLayoutAction } from "@/app/actions";
 import { authorName } from "@/lib/utils";
-import type { Pin } from "@/types";
+import type { Pin, Profile } from "@/types";
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
@@ -36,16 +36,88 @@ async function preparePinImage(file: File): Promise<File> {
 
 type Draft = Pick<Pin, "id" | "x" | "y" | "scale" | "rotation" | "z_index">;
 
+type Board = {
+  ownerId: string;
+  name: string;
+  pins: Pin[];
+};
+
+function boardsFrom(pins: Pin[], profiles: Profile[], userId: string | null, displayName: string | null): Board[] {
+  const map = new Map<string, Board>();
+  for (const profile of profiles) {
+    map.set(profile.id, { ownerId: profile.id, name: profile.display_name, pins: [] });
+  }
+  for (const pin of pins) {
+    const existing = map.get(pin.created_by);
+    if (existing) {
+      existing.pins.push(pin);
+    } else {
+      map.set(pin.created_by, { ownerId: pin.created_by, name: authorName(pin), pins: [pin] });
+    }
+  }
+  if (userId && !map.has(userId)) {
+    map.set(userId, { ownerId: userId, name: displayName ?? "メンバー", pins: [] });
+  }
+  return [...map.values()].sort((a, b) => {
+    if (a.ownerId === userId) return -1;
+    if (b.ownerId === userId) return 1;
+    return a.name.localeCompare(b.name, "ja");
+  });
+}
+
 export function Corkboard({
   pins,
+  profiles,
   userId,
+  displayName,
   loggedIn,
 }: {
   pins: Pin[];
+  profiles: Profile[];
   userId: string | null;
+  displayName: string | null;
   loggedIn: boolean;
 }) {
-  const sectionRef = useRef<HTMLElement>(null);
+  const boards = useMemo(
+    () => boardsFrom(pins, profiles, userId, displayName),
+    [pins, profiles, userId, displayName],
+  );
+  const many = boards.length > 1;
+  const [locked, setLocked] = useState(false);
+
+  return (
+    <section id="cork" className="mb-16">
+      <h2 className="mb-4 font-display text-xl font-semibold">Cork</h2>
+      <div
+        data-no-tab-swipe
+        className={`flex snap-x snap-mandatory gap-4 overscroll-x-contain pb-1 [scrollbar-width:thin]${locked ? " overflow-hidden" : " overflow-x-auto"}`}
+      >
+        {boards.map((board) => (
+          <div
+            key={board.ownerId}
+            className={many ? "w-[calc(100%-1.25rem)] shrink-0 snap-start" : "w-full shrink-0 snap-start"}
+          >
+            <CorkPane board={board} userId={userId} loggedIn={loggedIn} onEditingChange={setLocked} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CorkPane({
+  board,
+  userId,
+  loggedIn,
+  onEditingChange,
+}: {
+  board: Board;
+  userId: string | null;
+  loggedIn: boolean;
+  onEditingChange: (editing: boolean) => void;
+}) {
+  const mine = loggedIn && userId != null && board.ownerId === userId;
+  const paneRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
@@ -55,14 +127,19 @@ export function Corkboard({
   const [removed, setRemoved] = useState<Record<string, true>>({});
   const draftsRef = useRef(drafts);
   draftsRef.current = drafts;
-  const nextZ = useRef(Math.max(0, ...pins.map((p) => p.z_index)) + 1);
+  const nextZ = useRef(Math.max(0, ...board.pins.map((p) => p.z_index)) + 1);
+
+  useEffect(() => {
+    onEditingChange(editing);
+    return () => onEditingChange(false);
+  }, [editing, onEditingChange]);
 
   useEffect(() => {
     if (!editing) return;
     function onDocPointerDown(event: PointerEvent) {
       const target = event.target;
       if (!(target instanceof Node)) return;
-      if (sectionRef.current?.contains(target)) return;
+      if (paneRef.current?.contains(target)) return;
       setEditing(false);
       setSelected(null);
     }
@@ -70,7 +147,7 @@ export function Corkboard({
     return () => document.removeEventListener("pointerdown", onDocPointerDown);
   }, [editing]);
 
-  const shown = pins
+  const shown = board.pins
     .filter((pin) => !removed[pin.id])
     .map((pin) => {
       const draft = drafts[pin.id];
@@ -94,7 +171,7 @@ export function Corkboard({
   }
 
   async function persist(id: string) {
-    const pin = pins.find((p) => p.id === id);
+    const pin = board.pins.find((p) => p.id === id);
     const draft = draftsRef.current[id];
     const row = draft ?? pin;
     if (!row) return;
@@ -109,14 +186,14 @@ export function Corkboard({
   }
 
   function startDrag(id: string, mode: "move" | "scale" | "rotate", event: ReactPointerEvent) {
-    if (!editing) return;
+    if (!editing || !mine) return;
     const pin = shown.find((p) => p.id === id);
-    if (!pin || pin.created_by !== userId) return;
+    if (!pin) return;
     event.preventDefault();
     event.stopPropagation();
-    const board = boardRef.current;
-    if (!board) return;
-    const rect = board.getBoundingClientRect();
+    const boardEl = boardRef.current;
+    if (!boardEl) return;
+    const rect = boardEl.getBoundingClientRect();
     const z = nextZ.current++;
     patch(id, { z_index: z });
     setSelected(id);
@@ -164,19 +241,10 @@ export function Corkboard({
   }
 
   return (
-    <section id="cork" ref={sectionRef} className="mb-16">
-      <div className="mb-4 flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="font-display text-xl font-semibold">Cork</h2>
-          <p className="text-xs text-[#6B6258]">
-            {loggedIn
-              ? editing
-                ? "ボードの外をタップすると終わる。"
-                : "ボードをタップすると並べられる。"
-              : "もらったステッカーを、ここに貼る。"}
-          </p>
-        </div>
-        {loggedIn ? (
+    <div ref={paneRef}>
+      <div className="mb-2 flex items-end justify-between gap-3">
+        <p className="min-w-0 truncate text-xs text-[#6B6258]">{board.name}</p>
+        {mine ? (
           <button
             type="button"
             onClick={() => setAdding(true)}
@@ -187,15 +255,10 @@ export function Corkboard({
         ) : null}
       </div>
 
-      {editing ? (
-        <p className="mb-2 text-xs text-[#6B6258]">自分のステッカーをドラッグ。上で回転、右下で大きさ。</p>
-      ) : null}
-
       <div
         ref={boardRef}
-        data-no-tab-swipe
         data-allow-multitouch={editing ? "" : undefined}
-        className={`relative isolate aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-inner sm:aspect-[16/10]${loggedIn && !editing ? " cursor-pointer" : ""}`}
+        className={`relative isolate aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-inner sm:aspect-[16/10]${mine && !editing ? " cursor-pointer" : ""}`}
         style={{
           contain: "paint",
           backgroundColor: "#C4A574",
@@ -207,16 +270,10 @@ export function Corkboard({
           if (editing) setSelected(null);
         }}
         onClick={() => {
-          if (loggedIn && !editing) setEditing(true);
+          if (mine && !editing) setEditing(true);
         }}
       >
-        {!shown.length ? (
-          <p className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-[#5C4033]/80">
-            まだ貼っていません。
-          </p>
-        ) : null}
         {shown.map((pin) => {
-          const mine = userId != null && pin.created_by === userId;
           const on = selected === pin.id;
           return (
             <div
@@ -240,10 +297,10 @@ export function Corkboard({
               }}
               onClick={(e) => {
                 e.stopPropagation();
-                if (!loggedIn) return;
+                if (!mine) return;
                 if (!editing) {
                   setEditing(true);
-                  if (mine) setSelected(pin.id);
+                  setSelected(pin.id);
                 }
               }}
             >
@@ -255,9 +312,6 @@ export function Corkboard({
                   className="block h-auto w-full rounded-sm shadow-[2px_4px_10px_rgba(47,42,36,0.28)]"
                   draggable={false}
                 />
-                {!editing ? (
-                  <span className="sr-only">{authorName(pin)}</span>
-                ) : null}
                 {editing && mine && on ? (
                   <>
                     <button
@@ -288,7 +342,7 @@ export function Corkboard({
         })}
       </div>
 
-      {editing && selected && shown.some((pin) => pin.id === selected && pin.created_by === userId) ? (
+      {editing && selected && shown.some((pin) => pin.id === selected) ? (
         <button
           type="button"
           className="mt-3 min-h-11 rounded-full bg-[#B85C38] px-4 text-sm font-semibold text-[#F4EEE4]"
@@ -313,7 +367,7 @@ export function Corkboard({
           defaultRotation={Math.round((Math.random() - 0.5) * 22)}
         />
       ) : null}
-    </section>
+    </div>
   );
 }
 
