@@ -143,14 +143,20 @@ export function HomeClient({
               {data.places.map((place) => (
                 <div key={place.id}>
                   <Link href={`/places/${place.id}`} className="group block min-w-0">
-                    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
-                      {place.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
+                    {place.image_url ? (
+                      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-[#F4EEE4]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={place.image_url} alt={place.name} className="absolute inset-0 h-full w-full object-cover" />
-                      ) : null}
-                      <AuthorTag name={authorName(place)} className="absolute bottom-1.5 left-1.5" />
-                    </div>
-                    <p className="mt-2 text-sm">{place.name}</p>
+                        <AuthorTag name={authorName(place)} className="absolute bottom-1.5 left-1.5" />
+                      </div>
+                    ) : (
+                      <div className="relative flex aspect-[4/3] w-full flex-col justify-end overflow-hidden rounded-xl bg-[#F4EEE4] p-3">
+                        <AuthorTag name={authorName(place)} className="absolute left-1.5 top-1.5 bg-[#E8DFD0]" />
+                        <p className="font-display font-semibold leading-snug">{place.name}</p>
+                        {place.memo ? <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-[#6B6258]">{place.memo}</p> : null}
+                      </div>
+                    )}
+                    {place.image_url ? <p className="mt-2 text-sm">{place.name}</p> : null}
                   </Link>
                   {canRecord(place) ? <RecordForm table="places" id={place.id} /> : null}
                 </div>
