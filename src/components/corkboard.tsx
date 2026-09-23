@@ -9,6 +9,117 @@ function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
+function colorDist(a: { r: number; g: number; b: number }, b: { r: number; g: number; b: number }) {
+  return Math.hypot(a.r - b.r, a.g - b.g, a.b - b.b);
+}
+
+function sampleBlock(data: Uint8ClampedArray, w: number, h: number, x: number, y: number, size: number) {
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let a = 0;
+  let n = 0;
+  const x2 = Math.min(w, x + size);
+  const y2 = Math.min(h, y + size);
+  for (let yy = Math.max(0, y); yy < y2; yy++) {
+    for (let xx = Math.max(0, x); xx < x2; xx++) {
+      const i = (yy * w + xx) * 4;
+      r += data[i];
+      g += data[i + 1];
+      b += data[i + 2];
+      a += data[i + 3];
+      n++;
+    }
+  }
+  return { r: r / n, g: g / n, b: b / n, a: a / n };
+}
+
+/** iPhoneの背景削除あとに残る白・クリームの余白を、端からだけ抜く */
+function punchLightMatte(ctx: CanvasRenderingContext2D, width: number, height: number) {
+  const image = ctx.getImageData(0, 0, width, height);
+  const data = image.data;
+  const n = width * height;
+  let transparent = 0;
+  for (let i = 3; i < data.length; i += 4) if (data[i] < 128) transparent++;
+  if (transparent / n > 0.04) return;
+
+  const s = Math.max(2, Math.round(Math.min(width, height) * 0.02));
+  const corners = [
+    sampleBlock(data, width, height, 0, 0, s),
+    sampleBlock(data, width, height, width - s, 0, s),
+    sampleBlock(data, width, height, 0, height - s, s),
+    sampleBlock(data, width, height, width - s, height - s, s),
+  ];
+  if (corners.some((c) => c.a < 200)) return;
+  const avg = {
+    r: corners.reduce((t, c) => t + c.r, 0) / 4,
+    g: corners.reduce((t, c) => t + c.g, 0) / 4,
+    b: corners.reduce((t, c) => t + c.b, 0) / 4,
+  };
+  if (corners.some((c) => colorDist(c, avg) > 30)) return;
+  if ((avg.r + avg.g + avg.b) / 3 < 190) return;
+
+  const tol = 36;
+  let matte = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (Math.hypot(data[i] - avg.r, data[i + 1] - avg.g, data[i + 2] - avg.b) < tol) matte++;
+  }
+  const ratio = matte / n;
+  if (ratio < 0.06 || ratio > 0.62) return;
+
+  const match = (x: number, y: number) => {
+    const i = (y * width + x) * 4;
+    return Math.hypot(data[i] - avg.r, data[i + 1] - avg.g, data[i + 2] - avg.b) < tol;
+  };
+  const seen = new Uint8Array(n);
+  const qx = new Int32Array(n);
+  const qy = new Int32Array(n);
+  let qh = 0;
+  let qt = 0;
+  const push = (x: number, y: number) => {
+    const idx = y * width + x;
+    if (seen[idx] || !match(x, y)) return;
+    seen[idx] = 1;
+    qx[qt] = x;
+    qy[qt] = y;
+    qt++;
+  };
+  for (let x = 0; x < width; x++) {
+    push(x, 0);
+    push(x, height - 1);
+  }
+  for (let y = 0; y < height; y++) {
+    push(0, y);
+    push(width - 1, y);
+  }
+  while (qh < qt) {
+    const x = qx[qh];
+    const y = qy[qh++];
+    data[(y * width + x) * 4 + 3] = 0;
+    if (x > 0) push(x - 1, y);
+    if (x + 1 < width) push(x + 1, y);
+    if (y > 0) push(x, y - 1);
+    if (y + 1 < height) push(x, y + 1);
+  }
+
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const i = (y * width + x) * 4;
+      if (data[i + 3] === 0) continue;
+      const d = Math.hypot(data[i] - avg.r, data[i + 1] - avg.g, data[i + 2] - avg.b);
+      if (d < tol || d >= tol + 24) continue;
+      const near =
+        data[((y - 1) * width + x) * 4 + 3] === 0 ||
+        data[((y + 1) * width + x) * 4 + 3] === 0 ||
+        data[(y * width + x - 1) * 4 + 3] === 0 ||
+        data[(y * width + x + 1) * 4 + 3] === 0;
+      if (near) data[i + 3] = Math.round(data[i + 3] * ((d - tol) / 24));
+    }
+  }
+
+  ctx.putImageData(image, 0, 0);
+}
+
 async function preparePinImage(file: File): Promise<File> {
   try {
     const bitmap = await createImageBitmap(file);
@@ -19,16 +130,15 @@ async function preparePinImage(file: File): Promise<File> {
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return file;
+    ctx.clearRect(0, 0, width, height);
     ctx.drawImage(bitmap, 0, 0, width, height);
     bitmap.close();
-    const keepAlpha = file.type === "image/png" || file.type === "image/webp";
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, keepAlpha ? "image/png" : "image/jpeg", keepAlpha ? undefined : 0.82),
-    );
+    punchLightMatte(ctx, width, height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
     if (!blob) return file;
-    return new File([blob], keepAlpha ? "pin.png" : "pin.jpg", { type: blob.type });
+    return new File([blob], "pin.png", { type: "image/png" });
   } catch {
     return file;
   }
@@ -345,7 +455,7 @@ function CorkPane({
                 <img
                   src={pin.image_url}
                   alt={pin.memo ?? "ステッカー"}
-                  className="block h-auto w-full rounded-sm shadow-[2px_4px_10px_rgba(47,42,36,0.28)]"
+                  className="block h-auto w-full"
                   draggable={false}
                 />
                 {editing && mine && on ? (
