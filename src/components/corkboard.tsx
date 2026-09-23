@@ -241,36 +241,23 @@ export function Corkboard({
                     <button
                       type="button"
                       aria-label="回転"
-                      className="absolute left-1/2 top-0 h-5 w-5 -translate-x-1/2 -translate-y-6 rounded-full bg-[#2F2A24] text-[10px] text-[#F4EEE4]"
-                      onPointerDown={(e) => startDrag(pin.id, "rotate", e)}
+                      className="absolute left-1/2 top-0 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#2F2A24] text-sm text-[#F4EEE4]"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        startDrag(pin.id, "rotate", e);
+                      }}
                     >
                       ↻
                     </button>
                     <button
                       type="button"
                       aria-label="大きさ"
-                      className="absolute bottom-0 right-0 h-4 w-4 translate-x-1 translate-y-1 rounded-sm bg-[#2F2A24]"
-                      onPointerDown={(e) => startDrag(pin.id, "scale", e)}
-                    />
-                    <button
-                      type="button"
-                      className="absolute -right-1 -top-8 min-h-11 rounded-full bg-[#B85C38] px-3 text-xs font-semibold text-[#F4EEE4]"
+                      className="absolute bottom-0 right-0 h-5 w-5 translate-x-2 translate-y-2 rounded-sm bg-[#2F2A24]"
                       onPointerDown={(e) => {
-                        e.preventDefault();
                         e.stopPropagation();
+                        startDrag(pin.id, "scale", e);
                       }}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setRemoved((prev) => ({ ...prev, [pin.id]: true }));
-                        setSelected(null);
-                        const fd = new FormData();
-                        fd.set("id", pin.id);
-                        void deletePinAction(fd);
-                      }}
-                    >
-                      外す
-                    </button>
+                    />
                   </>
                 ) : null}
               </div>
@@ -278,6 +265,23 @@ export function Corkboard({
           );
         })}
       </div>
+
+      {editing && selected && shown.some((pin) => pin.id === selected && pin.created_by === userId) ? (
+        <button
+          type="button"
+          className="mt-3 min-h-11 rounded-full bg-[#B85C38] px-4 text-sm font-semibold text-[#F4EEE4]"
+          onClick={() => {
+            const id = selected;
+            setRemoved((prev) => ({ ...prev, [id]: true }));
+            setSelected(null);
+            const fd = new FormData();
+            fd.set("id", id);
+            void deletePinAction(fd);
+          }}
+        >
+          選んだステッカーを外す
+        </button>
+      ) : null}
 
       {adding ? (
         <AddPinModal
