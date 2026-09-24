@@ -31,9 +31,16 @@ create policy "pins_delete_own" on public.pins for delete to authenticated using
 drop trigger if exists pins_set_created_by on public.pins;
 create trigger pins_set_created_by before insert on public.pins for each row execute function public.set_created_by();
 
+grant select on public.pins to anon, authenticated;
+grant insert, update, delete on public.pins to authenticated;
+comment on table public.pins is 'corkboard stickers';
+notify pgrst, 'reload schema';
+notify pgrst, 'reload config';
+select pg_notify('pgrst', 'reload schema');
+
 insert into storage.buckets (id, name, public)
 values ('pins-images', 'pins-images', true)
-on conflict (id) do nothing;
+on conflict (id) do update set public = true;
 
 drop policy if exists "public_read_pins_images" on storage.objects;
 create policy "public_read_pins_images" on storage.objects

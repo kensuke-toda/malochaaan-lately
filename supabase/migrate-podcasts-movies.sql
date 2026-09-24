@@ -19,9 +19,12 @@ create table if not exists podcasts (
   image_url text,
   url text,
   memo text,
+  intent text not null default 'happened' check (intent in ('happened', 'want')),
   created_by uuid not null references public.profiles(id),
   created_at timestamptz not null default now()
 );
+
+alter table podcasts add column if not exists intent text not null default 'happened';
 
 create table if not exists movies (
   id uuid primary key default gen_random_uuid(),
@@ -29,9 +32,12 @@ create table if not exists movies (
   body text,
   image_url text,
   entry_date date not null default current_date,
+  intent text not null default 'happened' check (intent in ('happened', 'want')),
   created_by uuid not null references public.profiles(id),
   created_at timestamptz not null default now()
 );
+
+alter table movies add column if not exists intent text not null default 'happened';
 
 create table if not exists movie_photos (
   id uuid primary key default gen_random_uuid(),
@@ -79,27 +85,33 @@ drop trigger if exists movies_set_created_by on movies;
 create trigger podcasts_set_created_by before insert on podcasts for each row execute function public.set_created_by();
 create trigger movies_set_created_by before insert on movies for each row execute function public.set_created_by();
 
+grant select on public.podcasts to anon, authenticated, service_role;
+grant insert, update, delete on public.podcasts to authenticated, service_role;
+grant select on public.movies to anon, authenticated, service_role;
+grant insert, update, delete on public.movies to authenticated, service_role;
+grant select on public.movie_photos to anon, authenticated, service_role;
+grant insert, update, delete on public.movie_photos to authenticated, service_role;
+
+notify pgrst, 'reload schema';
+notify pgrst, 'reload config';
+
 insert into storage.buckets (id, name, public)
 values
   ('podcasts-images', 'podcasts-images', true),
   ('movies-images', 'movies-images', true)
-on conflict (id) do nothing;
+on conflict (id) do update set public = true;
 
-drop policy if exists "public_read_lately_images" on storage.objects;
-create policy "public_read_lately_images" on storage.objects
-  for select using (
-    bucket_id in ('things-images','places-images','books-images','sounds-images','posts-images','podcasts-images','movies-images')
-  );
+drop policy if exists "public_read_podcasts_movies_images" on storage.objects;
+create policy "public_read_podcasts_movies_images" on storage.objects
+  for select using (bucket_id in ('podcasts-images', 'movies-images'));
 
-drop policy if exists "auth_upload_lately_images" on storage.objects;
-create policy "auth_upload_lately_images" on storage.objects
-  for insert to authenticated with check (
-    bucket_id in ('things-images','places-images','books-images','sounds-images','posts-images','podcasts-images','movies-images')
-  );
+drop policy if exists "auth_upload_podcasts_movies_images" on storage.objects;
+create policy "auth_upload_podcasts_movies_images" on storage.objects
+  for insert to authenticated with check (bucket_id in ('podcasts-images', 'movies-images'));
 
-drop policy if exists "auth_delete_own_lately_images" on storage.objects;
-create policy "auth_delete_own_lately_images" on storage.objects
+drop policy if exists "auth_delete_own_podcasts_movies_images" on storage.objects;
+create policy "auth_delete_own_podcasts_movies_images" on storage.objects
   for delete to authenticated using (
-    bucket_id in ('things-images','places-images','books-images','sounds-images','posts-images','podcasts-images','movies-images')
+    bucket_id in ('podcasts-images', 'movies-images')
     and owner = auth.uid()
   );
