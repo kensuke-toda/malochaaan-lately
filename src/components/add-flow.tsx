@@ -71,20 +71,28 @@ export function AddFlowProvider({
         return;
       }
       const saved = readAddKind();
-      setKind(isModalKind(saved) ? saved : null);
+      if (isModalKind(saved)) {
+        setKind(saved);
+        persistAddSession(saved, intent);
+      }
       setHydrated(true);
     };
     restore();
     const onPhotos = () => restore();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") restore();
+    };
     window.addEventListener("pageshow", restore);
     window.addEventListener("focus", restore);
+    document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("lately:photos-picked", onPhotos);
     return () => {
       window.removeEventListener("pageshow", restore);
       window.removeEventListener("focus", restore);
+      document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("lately:photos-picked", onPhotos);
     };
-  }, [loggedIn, pathname]);
+  }, [loggedIn, pathname, intent]);
 
   function openKind(next: ModalKind) {
     setPicker(false);
