@@ -57,6 +57,7 @@ export function HomeClient({
   const want = intent === "want";
 
   const data = loggedIn && mine && scope === "mine" ? mine : everyone;
+  const posts = [...data.posts].sort((a, b) => b.created_at.localeCompare(a.created_at));
   const canRecord = (row: { created_by: string }) => want && userId != null && row.created_by === userId;
 
   const monthPrefix = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}`;
@@ -455,62 +456,7 @@ export function HomeClient({
         )}
       </section>
 
-      <section id="posts" className="mb-16">
-        <SectionHead title="Posts" note={want ? "やりたいこと。" : undefined} loggedIn={loggedIn} onAdd={() => openAdd("post")} />
-        {data.posts.length ? (
-          want ? (
-            <WantScroller>
-              {data.posts.map((post) => {
-                const cover = [...(post.post_photos ?? [])].sort((a, b) => a.sort_order - b.sort_order)[0];
-                return (
-                  <WantRow
-                    key={post.id}
-                    href={`/posts/${post.id}`}
-                    author={authorName(post)}
-                    title={postPreview(post, 48)}
-                    image={cover?.image_url}
-                  >
-                    {canRecord(post) ? <RecordForm table="posts" id={post.id} /> : null}
-                  </WantRow>
-                );
-              })}
-            </WantScroller>
-          ) : (
-            <CardScroller full>
-              {data.posts.map((post) => {
-                const photos = [...(post.post_photos ?? [])].sort((a, b) => a.sort_order - b.sort_order);
-                const cover = photos[0];
-                return (
-                  <div key={post.id}>
-                    <Link href={`/posts/${post.id}`} className="block min-w-0 rounded-xl bg-[#F4EEE4] p-4 ring-1 ring-[#2F2A24]/5">
-                      {cover ? (
-                        <div className="relative mb-3 aspect-[4/3] w-full overflow-hidden rounded-xl bg-[#E8DFD0]">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={cover.image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
-                          <AuthorTag name={authorName(post)} className="absolute bottom-1.5 left-1.5" />
-                          {photos.length > 1 && (
-                            <span className="absolute bottom-1.5 right-1.5 rounded bg-[#2F2A24]/80 px-1.5 py-0.5 text-[10px] font-semibold text-[#F4EEE4]">
-                              {photos.length}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <AuthorTag name={authorName(post)} className="bg-[#E8DFD0]" />
-                      )}
-                      <p className="mt-2 text-xs text-[#6B6258]">{formatDate(post.entry_date)}</p>
-                      <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{postText(post)}</p>
-                    </Link>
-                  </div>
-                );
-              })}
-            </CardScroller>
-          )
-        ) : (
-          <p className="text-sm text-[#6B6258]">まだありません。</p>
-        )}
-      </section>
-
-      <section id="works" className="mb-8">
+      <section id="works" className="mb-16">
         <SectionHead title="Works" note={want ? "やりたい仕事。" : undefined} loggedIn={loggedIn} onAdd={() => openAdd("work")} />
         {data.works.length ? (
           want ? (
@@ -547,6 +493,44 @@ export function HomeClient({
           <p className="text-sm text-[#6B6258]">まだありません。</p>
         )}
       </section>
+
+      {want ? null : (
+      <section id="posts" className="mb-8">
+        <SectionHead title="Posts" loggedIn={loggedIn} onAdd={() => openAdd("post")} />
+        {posts.length ? (
+            <div className="flex flex-col">
+              {posts.map((post) => {
+                const photos = [...(post.post_photos ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+                return (
+                  <Link
+                    key={post.id}
+                    href={`/posts/${post.id}`}
+                    className="block border-b border-[#2F2A24]/10 py-4 first:pt-0 last:border-b-0"
+                  >
+                    <div className="flex items-center gap-2">
+                      <AuthorTag name={authorName(post)} className="bg-[#E8DFD0]" />
+                      <p className="text-xs text-[#6B6258]">{formatDate(post.entry_date)}</p>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{postText(post)}</p>
+                    {photos.length > 0 && (
+                      <div className={`mt-3 grid gap-1.5 ${photos.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                        {photos.map((shot) => (
+                          <div key={shot.id} className="relative aspect-[4/3] overflow-hidden rounded-xl bg-[#E8DFD0]">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={shot.image_url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+        ) : (
+          <p className="text-sm text-[#6B6258]">まだありません。</p>
+        )}
+      </section>
+      )}
 
       {photoItem && photo && (
         <div
@@ -679,17 +663,11 @@ function WantRow({
   );
 }
 
-function CardScroller({ children, full }: { children: ReactNode; full?: boolean }) {
+function CardScroller({ children }: { children: ReactNode }) {
   return (
     <div className="flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin]">
       {Children.map(children, (child) => (
-        <div
-          className={
-            full
-              ? "flex w-full shrink-0 snap-start flex-col"
-              : "flex w-[calc((100%-1.25rem)/2)] shrink-0 snap-start flex-col sm:w-[calc((100%-2.5rem)/3)]"
-          }
-        >
+        <div className="flex w-[calc((100%-1.25rem)/2)] shrink-0 snap-start flex-col sm:w-[calc((100%-2.5rem)/3)]">
           {child}
         </div>
       ))}

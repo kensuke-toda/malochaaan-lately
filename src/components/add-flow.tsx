@@ -23,7 +23,6 @@ const wantKinds: { kind: ModalKind; label: string }[] = [
   { kind: "movie", label: "観たい映画" },
   { kind: "sound", label: "聴きたい音楽" },
   { kind: "podcast", label: "聴きたいポッドキャスト" },
-  { kind: "post", label: "やりたいこと" },
   { kind: "work", label: "やりたい仕事" },
 ];
 

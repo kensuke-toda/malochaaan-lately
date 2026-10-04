@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   createBookAction,
@@ -104,25 +104,98 @@ function BookFields({ disabled, intent }: { disabled: boolean; intent: Intent })
 }
 
 function FileField({ name, label, multiple }: { name: string; label: string; multiple?: boolean }) {
+  const formInputRef = useRef<HTMLInputElement>(null);
+  const pickerRef = useRef<HTMLInputElement | null>(null);
   const [hint, setHint] = useState("まだ選んでいません");
+  const [preview, setPreview] = useState<string | null>(null);
+
+  function showFiles(files: FileList | null) {
+    if (!files?.length) {
+      setHint("まだ選んでいません");
+      setPreview((current) => {
+        if (current) URL.revokeObjectURL(current);
+        return null;
+      });
+      return;
+    }
+    setHint(files.length === 1 ? files[0].name : `${files.length} 枚選択中`);
+    setPreview((current) => {
+      if (current) URL.revokeObjectURL(current);
+      return URL.createObjectURL(files[0]);
+    });
+  }
+
+  const showFilesRef = useRef(showFiles);
+  showFilesRef.current = showFiles;
+
+  useEffect(() => {
+    const picker = document.createElement("input");
+    picker.type = "file";
+    picker.accept = "image/*";
+    if (multiple) picker.multiple = true;
+    picker.tabIndex = -1;
+    picker.setAttribute("aria-hidden", "true");
+    picker.style.cssText = "position:fixed;top:-120px;left:0;width:80px;height:80px;opacity:0.02";
+    picker.addEventListener("change", () => {
+      const files = picker.files;
+      const target = formInputRef.current;
+      if (!target || !files?.length) return;
+      const transfer = new DataTransfer();
+      for (const file of Array.from(files)) transfer.items.add(file);
+      target.files = transfer.files;
+      showFilesRef.current(target.files);
+      picker.value = "";
+    });
+    document.body.appendChild(picker);
+    pickerRef.current = picker;
+    return () => {
+      picker.remove();
+      if (pickerRef.current === picker) pickerRef.current = null;
+    };
+  }, [multiple]);
+
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
+
+  function openPicker() {
+    const picker = pickerRef.current;
+    if (!picker) return;
+    // iOS will not open a photo picker for a file input inside this scrolling dialog.
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    html.style.overflow = "visible";
+    body.style.overflow = "visible";
+    picker.click();
+    html.style.overflow = prevHtmlOverflow;
+    body.style.overflow = prevBodyOverflow;
+  }
+
   return (
-    <label className="relative flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[#2F2A24]/30 bg-[#E8DFD0] px-3 py-4 text-center">
-      <span className="text-sm font-medium text-[#2F2A24]">{label}</span>
-      <span className="max-w-full truncate text-xs leading-relaxed text-[#6B6258]">{hint}</span>
+    <div className="rounded-xl border border-dashed border-[#2F2A24]/30 bg-[#E8DFD0] px-3 py-4 text-center">
+      <button type="button" onClick={openPicker} className="flex w-full cursor-pointer flex-col items-center justify-center gap-1">
+        {preview ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={preview} alt="" className="mb-1 h-24 w-24 rounded-lg object-cover" />
+        ) : null}
+        <span className="text-sm font-medium text-[#2F2A24]">{label}</span>
+        <span className="max-w-full truncate text-xs leading-relaxed text-[#6B6258]">{hint}</span>
+      </button>
       <input
+        ref={formInputRef}
         name={name}
         type="file"
         accept="image/*"
         multiple={multiple}
-        className="absolute inset-0 cursor-pointer opacity-0"
-        onChange={(e) => {
-          const files = e.target.files;
-          if (!files?.length) setHint("まだ選んでいません");
-          else if (files.length === 1) setHint(files[0].name);
-          else setHint(`${files.length} 枚選択中`);
-        }}
+        tabIndex={-1}
+        className="sr-only"
+        onChange={(e) => showFiles(e.target.files)}
       />
-    </label>
+    </div>
   );
 }
 

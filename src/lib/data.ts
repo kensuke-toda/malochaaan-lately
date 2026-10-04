@@ -106,7 +106,7 @@ export async function fetchHomeData(
     scoped(supabase.from("books").select(`*, ${PROFILE}`)).order(listOrder, { ascending: false }).limit(cap),
     scoped(supabase.from("sounds").select(`*, ${PROFILE}`)).order(listOrder, { ascending: false }).limit(cap),
     scoped(supabase.from("podcasts").select(`*, ${PROFILE}`)).order(listOrder, { ascending: false }).limit(cap),
-    scoped(supabase.from("posts").select(`*, post_photos(*), ${PROFILE}`)).order(intent === "want" ? "created_at" : "entry_date", { ascending: false }).limit(cap),
+    scoped(supabase.from("posts").select(`*, post_photos(*), ${PROFILE}`)).order("created_at", { ascending: false }).limit(cap),
     scoped(supabase.from("movies").select(`*, ${PROFILE}`)).order(listOrder, { ascending: false }).limit(cap),
     scoped(supabase.from("works").select(`*, ${PROFILE}`)).order(listOrder, { ascending: false }).limit(cap),
   ]);
