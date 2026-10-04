@@ -1,16 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useSyncExternalStore, type ChangeEvent } from "react";
-import { bindLibraryReceiver, libraryInputId } from "@/lib/library-input";
-
-function isAppleTouchDevice() {
-  if (typeof navigator === "undefined") return false;
-  return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-}
-
-function subscribeNoop() {
-  return () => {};
-}
+import { useEffect, useMemo, useState } from "react";
+import { PhotoPickSheet } from "@/components/photo-pick-sheet";
+import { setPhotoDraft } from "@/lib/photo-draft";
 
 export function useModalScrollLock() {
   useEffect(() => {
@@ -29,37 +21,6 @@ export function useModalScrollLock() {
   }, []);
 }
 
-function CameraButton({
-  allowMultiple,
-  onFiles,
-}: {
-  allowMultiple: boolean;
-  onFiles: (files: File[]) => void;
-}) {
-  function handleChange(event: ChangeEvent<HTMLInputElement>) {
-    const input = event.currentTarget;
-    const picked = input.files ? Array.from(input.files) : [];
-    input.value = "";
-    if (!picked.length) return;
-    onFiles(allowMultiple ? picked : picked.slice(0, 1));
-  }
-
-  return (
-    <label className="relative flex min-h-11 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-[#2F2A24] px-3 text-sm font-semibold text-[#F4EEE4]">
-      <span className="pointer-events-none">写真を撮る</span>
-      <input
-        type="file"
-        accept="image/*"
-        capture="environment"
-        multiple={allowMultiple || undefined}
-        aria-label="写真を撮る"
-        onChange={handleChange}
-        className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-[0.01]"
-      />
-    </label>
-  );
-}
-
 export function PhotoField({
   label,
   multiple,
@@ -74,14 +35,8 @@ export function PhotoField({
   draftKey: string;
 }) {
   const allowMultiple = Boolean(multiple);
-  const appleTouch = useSyncExternalStore(subscribeNoop, isAppleTouchDevice, () => false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const preview = useMemo(() => (files[0] ? URL.createObjectURL(files[0]) : null), [files]);
-  const inputId = useSyncExternalStore(subscribeNoop, libraryInputId, () => "lately-library-file-input");
-  const onFilesRef = useRef(onFiles);
-
-  useEffect(() => {
-    onFilesRef.current = onFiles;
-  }, [onFiles]);
 
   useEffect(() => {
     return () => {
@@ -89,24 +44,17 @@ export function PhotoField({
     };
   }, [preview]);
 
-  useEffect(() => {
-    bindLibraryReceiver({
-      draftKey,
-      allowMultiple,
-      onFiles: (next) => onFilesRef.current(next),
-    });
-    return () => bindLibraryReceiver(null);
-  }, [draftKey, allowMultiple]);
-
   const hint = !files.length
-    ? appleTouch
-      ? allowMultiple
-        ? "選んで右上の青チェック"
-        : "1枚選んで右上の青チェック"
-      : "まだ選んでいません"
+    ? "写真を選んで「追加」"
     : files.length === 1
       ? files[0].name
       : `${files.length} 枚選択中`;
+
+  function confirmFiles(next: File[]) {
+    setPhotoDraft(draftKey, next);
+    onFiles(next);
+    setSheetOpen(false);
+  }
 
   return (
     <div className="rounded-xl border border-dashed border-[#2F2A24]/30 bg-[#E8DFD0] px-3 py-4 text-center">
@@ -116,17 +64,26 @@ export function PhotoField({
           <img src={preview} alt="" className="mb-1 h-24 w-24 rounded-lg object-cover" />
         ) : null}
         <span className="text-sm font-medium text-[#2F2A24]">{label}</span>
-        <span className="max-w-full text-xs leading-relaxed text-[#6B6258]">{hint}</span>
+        <span className="max-w-full truncate text-xs leading-relaxed text-[#6B6258]">{hint}</span>
       </div>
-      <div className="mt-3 flex flex-col gap-2">
-        <CameraButton allowMultiple={allowMultiple} onFiles={onFiles} />
-        <label
-          htmlFor={inputId}
-          className="relative flex min-h-11 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-[#2F2A24] px-3 text-sm font-semibold text-[#F4EEE4]"
+      <div className="mt-3">
+        <button
+          type="button"
+          onClick={() => setSheetOpen(true)}
+          className="flex min-h-11 w-full items-center justify-center rounded-full bg-[#2F2A24] px-3 text-sm font-semibold text-[#F4EEE4]"
         >
-          ライブラリから選ぶ
-        </label>
+          {files.length ? "写真を選び直す" : "写真を選ぶ"}
+        </button>
       </div>
+
+      {sheetOpen ? (
+        <PhotoPickSheet
+          multiple={allowMultiple}
+          initialFiles={files}
+          onClose={() => setSheetOpen(false)}
+          onConfirm={confirmFiles}
+        />
+      ) : null}
     </div>
   );
 }
