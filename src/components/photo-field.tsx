@@ -102,7 +102,7 @@ export function PhotoField({
     ? appleTouch
       ? allowMultiple
         ? "選んで右上の青チェック"
-        : "1枚だけ選んで右上の青チェック"
+        : "1枚選んで右上の青チェック"
       : "まだ選んでいません"
     : files.length === 1
       ? files[0].name
@@ -117,11 +117,6 @@ export function PhotoField({
         ) : null}
         <span className="text-sm font-medium text-[#2F2A24]">{label}</span>
         <span className="max-w-full text-xs leading-relaxed text-[#6B6258]">{hint}</span>
-        {appleTouch && !files.length ? (
-          <span className="max-w-full text-[11px] leading-relaxed text-[#B85C38]">
-            たくさん選ぶと戻れないことがあります。1枚だけにしてください。
-          </span>
-        ) : null}
       </div>
       <div className="mt-3 flex flex-col gap-2">
         <CameraButton allowMultiple={allowMultiple} onFiles={onFiles} />
