@@ -22,7 +22,8 @@ export const metadata: Metadata = {
   description: "日々の記録",
   applicationName: "Lately",
   appleWebApp: {
-    capable: true,
+    // Standalone iOS PWAs often fail to return from the system photo picker.
+    capable: false,
     title: "Lately",
     statusBarStyle: "default",
   },

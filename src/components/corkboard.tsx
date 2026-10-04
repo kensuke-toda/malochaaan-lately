@@ -3,26 +3,12 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { createPinAction, deletePinAction, updatePinLayoutAction } from "@/app/actions";
 import { PhotoField, useModalScrollLock } from "@/components/photo-field";
+import { persistCorkOpen, readCorkOpen } from "@/lib/add-session";
 import { clearPhotoDraft, loadPhotoDraft, peekPhotoDraft, setPhotoDraft } from "@/lib/photo-draft";
 import { authorName } from "@/lib/utils";
 import type { Pin, Profile } from "@/types";
 
 const CORK_DRAFT = "cork:pin";
-
-function readCorkOpen() {
-  if (typeof window === "undefined") return false;
-  return new URLSearchParams(window.location.search).get("cork") === "1";
-}
-
-function writeCorkOpen(open: boolean) {
-  if (typeof window === "undefined") return;
-  const url = new URL(window.location.href);
-  if (open) url.searchParams.set("cork", "1");
-  else url.searchParams.delete("cork");
-  const next = `${url.pathname}${url.search}${url.hash}`;
-  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  if (next !== current) window.history.replaceState(window.history.state, "", next);
-}
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
@@ -230,13 +216,13 @@ export function Corkboard({
 
   function openAdding() {
     setAdding(true);
-    writeCorkOpen(true);
+    persistCorkOpen(true);
   }
 
   function closeAdding() {
     void clearPhotoDraft(CORK_DRAFT);
     setAdding(false);
-    writeCorkOpen(false);
+    persistCorkOpen(false);
   }
 
   useEffect(() => {
@@ -621,7 +607,7 @@ function AddPinModal({
         <input type="hidden" name="y" value={defaultY} />
         <input type="hidden" name="rotation" value={defaultRotation} />
         <div className="flex flex-col gap-3">
-          <PhotoField label="写真を選択" files={photos} onFiles={updatePhotos} />
+          <PhotoField label="写真を選択" draftKey={CORK_DRAFT} files={photos} onFiles={updatePhotos} />
           <input name="memo" placeholder="メモ（任意）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
           {error ? <p className="text-sm text-[#B85C38]">{error}</p> : null}
           <button

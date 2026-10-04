@@ -7,7 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "日々の記録",
     start_url: "/",
     scope: "/",
-    display: "standalone",
+    // browser: iOS home-screen standalone breaks returning from the photo library picker
+    display: "browser",
     background_color: "#E8DFD0",
     theme_color: "#E8DFD0",
     lang: "ja",
