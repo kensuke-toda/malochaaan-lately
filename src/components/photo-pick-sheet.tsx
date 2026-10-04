@@ -40,6 +40,8 @@ export function PhotoPickSheet({
   const allowMultiple = Boolean(multiple);
   const [files, setFiles] = useState<File[]>(initialFiles);
   const [selected, setSelected] = useState<number[]>(() => initialFiles.map((_, index) => index));
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const previews = useObjectUrls(files);
   const libraryId = useSyncExternalStore(subscribeNoop, libraryInputId, () => "lately-durable-library-input");
   const cameraId = useSyncExternalStore(subscribeNoop, cameraInputId, () => "lately-durable-camera-input");
@@ -59,6 +61,7 @@ export function PhotoPickSheet({
       draftKey,
       allowMultiple,
       onPicked: (picked) => {
+        setError(null);
         if (!allowMultiple) {
           // Single photo: land straight on the edit form with the pick applied.
           onConfirmRef.current(picked);
@@ -73,6 +76,27 @@ export function PhotoPickSheet({
     });
     return () => bindPhotoPicker(null);
   }, [draftKey, allowMultiple]);
+
+  useEffect(() => {
+    const onPicking = () => {
+      setLoading(true);
+      setError(null);
+    };
+    const onSettled = () => setLoading(false);
+    const onError = (event: Event) => {
+      const detail = (event as CustomEvent<{ message?: string }>).detail;
+      setLoading(false);
+      setError(detail?.message || "写真を読み込めませんでした");
+    };
+    window.addEventListener("lately:photos-picking", onPicking);
+    window.addEventListener("lately:photos-pick-settled", onSettled);
+    window.addEventListener("lately:photos-pick-error", onError);
+    return () => {
+      window.removeEventListener("lately:photos-picking", onPicking);
+      window.removeEventListener("lately:photos-pick-settled", onSettled);
+      window.removeEventListener("lately:photos-pick-error", onError);
+    };
+  }, []);
 
   function toggleSelect(index: number) {
     if (!allowMultiple) {
@@ -164,8 +188,10 @@ export function PhotoPickSheet({
               </label>
             </div>
             <p className="text-[11px] leading-relaxed text-[#F4EEE4]/45">
-              写真を選んだら右上のチェック（または「追加」）を押してください。戻ってきたら編集画面に反映します。
+              写真を選んだら右上のチェック（または「追加」）を押してください。カメラ写真は読み込みに数秒かかることがあります。うまくいかない写真は、一度「写真」アプリで開いてから選び直してください。
             </p>
+            {loading ? <p className="text-sm font-medium text-[#F4EEE4]">読み込み中…</p> : null}
+            {error ? <p className="text-sm leading-relaxed text-[#F0A090]">{error}</p> : null}
           </div>
         </div>
 
