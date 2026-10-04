@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useSyncExternalStore, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useSyncExternalStore, type ChangeEvent } from "react";
+import { bindLibraryReceiver, libraryInputId } from "@/lib/library-input";
 
 function isAppleTouchDevice() {
   if (typeof navigator === "undefined") return false;
@@ -28,22 +29,13 @@ export function useModalScrollLock() {
   }, []);
 }
 
-function FileButton({
-  title,
-  camera,
+function CameraButton({
   allowMultiple,
   onFiles,
 }: {
-  title: string;
-  camera?: boolean;
   allowMultiple: boolean;
   onFiles: (files: File[]) => void;
 }) {
-  // iOS single-select can check a photo and never dismiss. Library needs multiple so
-  // the system shows「追加」; we still keep only one file unless allowMultiple.
-  // Camera stays true single-shot.
-  const inputMultiple = camera ? allowMultiple : true;
-
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget;
     const picked = input.files ? Array.from(input.files) : [];
@@ -54,13 +46,13 @@ function FileButton({
 
   return (
     <label className="relative flex min-h-11 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-[#2F2A24] px-3 text-sm font-semibold text-[#F4EEE4]">
-      <span className="pointer-events-none">{title}</span>
+      <span className="pointer-events-none">写真を撮る</span>
       <input
         type="file"
         accept="image/*"
-        capture={camera ? "environment" : undefined}
-        multiple={inputMultiple || undefined}
-        aria-label={title}
+        capture="environment"
+        multiple={allowMultiple || undefined}
+        aria-label="写真を撮る"
         onChange={handleChange}
         className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-[0.01]"
       />
@@ -73,15 +65,23 @@ export function PhotoField({
   multiple,
   files,
   onFiles,
+  draftKey,
 }: {
   label: string;
   multiple?: boolean;
   files: File[];
   onFiles: (files: File[]) => void;
+  draftKey: string;
 }) {
   const allowMultiple = Boolean(multiple);
   const appleTouch = useSyncExternalStore(subscribeNoop, isAppleTouchDevice, () => false);
   const preview = useMemo(() => (files[0] ? URL.createObjectURL(files[0]) : null), [files]);
+  const inputId = useSyncExternalStore(subscribeNoop, libraryInputId, () => "lately-library-file-input");
+  const onFilesRef = useRef(onFiles);
+
+  useEffect(() => {
+    onFilesRef.current = onFiles;
+  }, [onFiles]);
 
   useEffect(() => {
     return () => {
@@ -89,9 +89,20 @@ export function PhotoField({
     };
   }, [preview]);
 
+  useEffect(() => {
+    bindLibraryReceiver({
+      draftKey,
+      allowMultiple,
+      onFiles: (next) => onFilesRef.current(next),
+    });
+    return () => bindLibraryReceiver(null);
+  }, [draftKey, allowMultiple]);
+
   const hint = !files.length
     ? appleTouch
-      ? "1枚チェック → 右上の「追加」"
+      ? allowMultiple
+        ? "選んで右上の青チェック"
+        : "1枚だけ選んで右上の青チェック"
       : "まだ選んでいません"
     : files.length === 1
       ? files[0].name
@@ -105,11 +116,21 @@ export function PhotoField({
           <img src={preview} alt="" className="mb-1 h-24 w-24 rounded-lg object-cover" />
         ) : null}
         <span className="text-sm font-medium text-[#2F2A24]">{label}</span>
-        <span className="max-w-full truncate text-xs leading-relaxed text-[#6B6258]">{hint}</span>
+        <span className="max-w-full text-xs leading-relaxed text-[#6B6258]">{hint}</span>
+        {appleTouch && !files.length ? (
+          <span className="max-w-full text-[11px] leading-relaxed text-[#B85C38]">
+            たくさん選ぶと戻れないことがあります。1枚だけにしてください。
+          </span>
+        ) : null}
       </div>
       <div className="mt-3 flex flex-col gap-2">
-        <FileButton title="写真を撮る" camera allowMultiple={allowMultiple} onFiles={onFiles} />
-        <FileButton title="ライブラリから選ぶ" allowMultiple={allowMultiple} onFiles={onFiles} />
+        <CameraButton allowMultiple={allowMultiple} onFiles={onFiles} />
+        <label
+          htmlFor={inputId}
+          className="relative flex min-h-11 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-[#2F2A24] px-3 text-sm font-semibold text-[#F4EEE4]"
+        >
+          ライブラリから選ぶ
+        </label>
       </div>
     </div>
   );

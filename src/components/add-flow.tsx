@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { AddModal, type ModalKind } from "@/components/add-modal";
+import { persistAddSession, readAddKind } from "@/lib/add-session";
 import { clearPhotoDraft } from "@/lib/photo-draft";
 import type { Intent } from "@/types";
 
@@ -31,22 +32,6 @@ const KIND_SET = new Set<string>(happenedKinds.map((item) => item.kind));
 
 function isModalKind(value: string | null | undefined): value is ModalKind {
   return Boolean(value && KIND_SET.has(value));
-}
-
-function readAddKindFromUrl() {
-  if (typeof window === "undefined") return null;
-  const value = new URLSearchParams(window.location.search).get("add");
-  return isModalKind(value) ? value : null;
-}
-
-function writeAddKindToUrl(kind: ModalKind | null) {
-  if (typeof window === "undefined") return;
-  const url = new URL(window.location.href);
-  if (kind) url.searchParams.set("add", kind);
-  else url.searchParams.delete("add");
-  const next = `${url.pathname}${url.search}${url.hash}`;
-  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  if (next !== current) window.history.replaceState(window.history.state, "", next);
 }
 
 type AddFlowValue = {
@@ -80,29 +65,37 @@ export function AddFlowProvider({
   useEffect(() => {
     const restore = () => {
       if (!loggedIn) {
-        writeAddKindToUrl(null);
+        persistAddSession(null);
         setKind(null);
         setHydrated(true);
         return;
       }
-      setKind(readAddKindFromUrl());
+      const saved = readAddKind();
+      setKind(isModalKind(saved) ? saved : null);
       setHydrated(true);
     };
     restore();
+    const onPhotos = () => restore();
     window.addEventListener("pageshow", restore);
-    return () => window.removeEventListener("pageshow", restore);
+    window.addEventListener("focus", restore);
+    window.addEventListener("lately:photos-picked", onPhotos);
+    return () => {
+      window.removeEventListener("pageshow", restore);
+      window.removeEventListener("focus", restore);
+      window.removeEventListener("lately:photos-picked", onPhotos);
+    };
   }, [loggedIn, pathname]);
 
   function openKind(next: ModalKind) {
     setPicker(false);
     setKind(next);
-    writeAddKindToUrl(next);
+    persistAddSession(next, intent);
   }
 
   function closeKind() {
     if (kind) void clearPhotoDraft(`add:${kind}`);
     setKind(null);
-    writeAddKindToUrl(null);
+    persistAddSession(null);
   }
 
   function openAdd(next?: ModalKind) {
@@ -112,7 +105,7 @@ export function AddFlowProvider({
       return;
     }
     setKind(null);
-    writeAddKindToUrl(null);
+    persistAddSession(null);
     setPicker(true);
   }
 

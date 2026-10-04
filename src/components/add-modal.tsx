@@ -266,11 +266,13 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
           )}
           </div>
           <div className="flex flex-col gap-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-            {kind === "place" ? <PhotoField label="お店の写真を選択" files={photos} onFiles={updatePhotos} /> : null}
-            {kind === "thing" || kind === "movie" ? <PhotoField label="写真を選択" files={photos} onFiles={updatePhotos} /> : null}
-            {kind === "book" || kind === "podcast" ? <PhotoField label="カバー画像を選択" files={photos} onFiles={updatePhotos} /> : null}
-            {kind === "sound" ? <PhotoField label="ジャケット画像を選択" files={photos} onFiles={updatePhotos} /> : null}
-            {kind === "post" && !want ? <PhotoField label="写真を選択（複数可）" multiple files={photos} onFiles={updatePhotos} /> : null}
+            {kind === "place" ? <PhotoField label="お店の写真を選択" draftKey={draftKey} files={photos} onFiles={updatePhotos} /> : null}
+            {kind === "thing" || kind === "movie" ? <PhotoField label="写真を選択" draftKey={draftKey} files={photos} onFiles={updatePhotos} /> : null}
+            {kind === "book" || kind === "podcast" ? <PhotoField label="カバー画像を選択" draftKey={draftKey} files={photos} onFiles={updatePhotos} /> : null}
+            {kind === "sound" ? <PhotoField label="ジャケット画像を選択" draftKey={draftKey} files={photos} onFiles={updatePhotos} /> : null}
+            {kind === "post" && !want ? (
+              <PhotoField label="写真を選択（複数可）" draftKey={draftKey} multiple files={photos} onFiles={updatePhotos} />
+            ) : null}
             {error ? <p className="text-sm text-[#B85C38]">{error}</p> : null}
             <button
               type="submit"
