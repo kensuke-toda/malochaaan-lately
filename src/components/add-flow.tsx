@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { AddModal, type ModalKind } from "@/components/add-modal";
 import { persistAddSession, readAddKind } from "@/lib/add-session";
 import { clearPhotoDraft } from "@/lib/photo-draft";
+import { cameraInputId, libraryInputId } from "@/lib/photo-picker";
 import type { Intent } from "@/types";
 
 const happenedKinds: { kind: ModalKind; label: string }[] = [
@@ -63,6 +64,11 @@ export function AddFlowProvider({
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    // Mount durable file inputs ASAP so iOS photo-library confirm can land
+    // even if the React sheet unmounted while the system picker was open.
+    libraryInputId();
+    cameraInputId();
+
     const restore = () => {
       if (!loggedIn) {
         persistAddSession(null);

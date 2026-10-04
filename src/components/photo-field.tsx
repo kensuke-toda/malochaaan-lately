@@ -44,8 +44,19 @@ export function PhotoField({
     };
   }, [preview]);
 
+  // If the system picker remounted the page, draft may land after hydrate — open stays closed.
+  useEffect(() => {
+    const onPhotos = (event: Event) => {
+      const detail = (event as CustomEvent<{ draftKey?: string }>).detail;
+      if (detail?.draftKey && detail.draftKey !== draftKey) return;
+      setSheetOpen(false);
+    };
+    window.addEventListener("lately:photos-picked", onPhotos);
+    return () => window.removeEventListener("lately:photos-picked", onPhotos);
+  }, [draftKey]);
+
   const hint = !files.length
-    ? "写真を選んで「追加」"
+    ? "ライブラリまたはカメラから選ぶ"
     : files.length === 1
       ? files[0].name
       : `${files.length} 枚選択中`;
@@ -79,6 +90,7 @@ export function PhotoField({
       {sheetOpen ? (
         <PhotoPickSheet
           multiple={allowMultiple}
+          draftKey={draftKey}
           initialFiles={files}
           onClose={() => setSheetOpen(false)}
           onConfirm={confirmFiles}
