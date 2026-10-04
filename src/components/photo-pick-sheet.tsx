@@ -191,7 +191,7 @@ export function PhotoPickSheet({
               {allowMultiple
                 ? "写真にチェックを付けたら、右上の「追加」を押してください。"
                 : "写真を1枚チェックしたら、右上の「追加」を押してください。写真の青チェックだけでは戻りません。"}
-              カメラ写真は読み込みに数秒かかることがあります。
+              カメラで撮った写真がうまくいかないときは、この画面の「カメラ」から撮るのが確実です。
             </p>
             {loading ? <p className="text-sm font-medium text-[#F4EEE4]">読み込み中…</p> : null}
             {error ? <p className="text-sm leading-relaxed text-[#F0A090]">{error}</p> : null}

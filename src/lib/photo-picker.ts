@@ -2,10 +2,11 @@
 
 import { readAddKind, readCorkOpen } from "@/lib/add-session";
 import { normalizePickedImage } from "@/lib/normalize-image";
-import { setPhotoDraftAsync } from "@/lib/photo-draft";
+import { setPhotoDraft } from "@/lib/photo-draft";
 
 const LIBRARY_ID = "lately-durable-library-input";
 const CAMERA_ID = "lately-durable-camera-input";
+const LOADING_ID = "lately-photo-loading-overlay";
 
 export type PhotoPickerReceiver = {
   draftKey: string;
@@ -56,6 +57,26 @@ function emit(name: string, detail?: Record<string, unknown>) {
   window.dispatchEvent(new CustomEvent(name, { detail }));
 }
 
+function showLoadingOverlay(message: string) {
+  if (typeof document === "undefined") return;
+  let el = document.getElementById(LOADING_ID);
+  if (!el) {
+    el = document.createElement("div");
+    el.id = LOADING_ID;
+    el.setAttribute("role", "status");
+    el.style.cssText =
+      "position:fixed;inset:0;z-index:2147483646;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(47,42,36,0.72);color:#F4EEE4;font:600 15px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;text-align:center";
+    document.documentElement.appendChild(el);
+  }
+  el.textContent = message;
+  el.style.display = "flex";
+}
+
+function hideLoadingOverlay() {
+  const el = document.getElementById(LOADING_ID);
+  if (el) el.style.display = "none";
+}
+
 async function take(input: HTMLInputElement) {
   if (taking) return;
   const picked = input.files ? Array.from(input.files) : [];
@@ -68,6 +89,7 @@ async function take(input: HTMLInputElement) {
   const allowMultiple = Boolean(receiver?.allowMultiple);
   const onPicked = receiver?.onPicked;
   emit("lately:photos-picking", { draftKey });
+  showLoadingOverlay("写真を読み込み中…\nそのまま待ってください");
   try {
     const keep = allowMultiple ? picked : picked.slice(0, 1);
     // Normalize (HEIC → JPEG) before clearing — iOS can invalidate File refs after dismiss.
@@ -77,8 +99,8 @@ async function take(input: HTMLInputElement) {
       return;
     }
 
-    // Persist before clearing so a reload mid-write can still drain input.files.
-    await setPhotoDraftAsync(draftKey, clones);
+    // Memory + background IDB, then hand off so the edit screen can render immediately.
+    setPhotoDraft(draftKey, clones);
     input.value = "";
     onPicked?.(clones);
     emit("lately:photos-picked", { draftKey, count: clones.length });
@@ -86,10 +108,11 @@ async function take(input: HTMLInputElement) {
     emit("lately:photos-pick-error", {
       draftKey,
       message:
-        "この写真を読み込めませんでした。スクショは通りやすいです。カメラ写真は一度「写真」アプリで開いてから選び直すか、設定で iCloud 写真のダウンロードを確認してください。",
+        "カメラで撮った写真を読み込めませんでした。下の「カメラ」から撮り直すか、写真アプリでその写真を開いて（ダウンロードして）から、もう一度ライブラリで選んでください。",
     });
   } finally {
     taking = false;
+    hideLoadingOverlay();
     emit("lately:photos-pick-settled", { draftKey });
   }
 }
