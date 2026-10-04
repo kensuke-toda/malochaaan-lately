@@ -1,75 +1,106 @@
 "use client";
 
-import { useEffect, useState, type PointerEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
-function releaseAncestors(start: HTMLElement) {
-  const saved: { el: HTMLElement; css: string }[] = [];
-  let el: HTMLElement | null = start.parentElement;
-  while (el) {
-    saved.push({ el, css: el.style.cssText });
-    el.style.setProperty("overflow", "visible", "important");
-    el.style.setProperty("overflow-x", "visible", "important");
-    el.style.setProperty("overflow-y", "visible", "important");
-    const position = getComputedStyle(el).position;
-    if (position === "fixed" || position === "sticky") {
-      el.style.setProperty("position", "absolute", "important");
-    }
-    if (getComputedStyle(el).transform !== "none") {
-      el.style.setProperty("transform", "none", "important");
-    }
-    el = el.parentElement;
-  }
-  let restored = false;
-  return () => {
-    if (restored) return;
-    restored = true;
-    for (const item of saved.reverse()) item.el.style.cssText = item.css;
-  };
+const ACCEPT = "image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif";
+
+function useBodyScrollable() {
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtml = html.style.overflow;
+    const prevBody = body.style.overflow;
+    html.style.overflow = "visible";
+    body.style.overflow = "visible";
+    return () => {
+      html.style.overflow = prevHtml;
+      body.style.overflow = prevBody;
+    };
+  }, []);
 }
 
-function PhotoButton({
+function LibraryInput({
+  slot,
   title,
   camera,
   multiple,
   onFiles,
 }: {
+  slot: HTMLDivElement | null;
   title: string;
   camera?: boolean;
   multiple?: boolean;
   onFiles: (files: File[]) => void;
 }) {
-  function prepare(event: PointerEvent<HTMLInputElement>) {
-    const restore = releaseAncestors(event.currentTarget);
-    event.currentTarget.addEventListener("change", () => restore(), { once: true });
-    event.currentTarget.addEventListener("cancel", () => restore(), { once: true });
-    window.setTimeout(() => {
-      window.addEventListener("focus", () => window.setTimeout(restore, 600), { once: true });
-    }, 800);
-  }
+  const frozen = useRef(false);
+  const [box, setBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 
+  useLayoutEffect(() => {
+    if (!slot) return;
+    const update = () => {
+      if (frozen.current) return;
+      const rect = slot.getBoundingClientRect();
+      setBox({
+        top: window.scrollY + rect.top,
+        left: window.scrollX + rect.left,
+        width: rect.width,
+        height: Math.max(rect.height, 44),
+      });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [slot]);
+
+  if (!box) return null;
+
+  return createPortal(
+    <input
+      type="file"
+      accept={ACCEPT}
+      multiple={multiple ? true : undefined}
+      aria-label={title}
+      ref={(el) => {
+        if (!el) return;
+        if (camera) el.setAttribute("capture", "environment");
+        else el.removeAttribute("capture");
+      }}
+      onPointerDown={() => {
+        frozen.current = true;
+      }}
+      onChange={(e) => {
+        const picked = e.target.files ? Array.from(e.target.files) : [];
+        e.target.value = "";
+        frozen.current = false;
+        if (picked.length) onFiles(multiple ? picked : picked.slice(0, 1));
+      }}
+      style={{
+        position: "absolute",
+        top: box.top,
+        left: box.left,
+        width: box.width,
+        height: box.height,
+        zIndex: 80,
+        margin: 0,
+        opacity: 1,
+        fontSize: 16,
+      }}
+      className="text-[0px] file:h-full file:w-full file:rounded-full file:border-0 file:bg-[#2F2A24] file:text-sm file:font-semibold file:text-[#F4EEE4]"
+    />,
+    document.body,
+  );
+}
+
+function Slot({ title, bind }: { title: string; bind: (node: HTMLDivElement | null) => void }) {
   return (
-    <div className="relative block min-h-11">
-      <span className="pointer-events-none flex min-h-11 items-center justify-center rounded-full bg-[#2F2A24] px-3 text-sm font-semibold text-[#F4EEE4]">
-        {title}
-      </span>
-      <input
-        type="file"
-        accept="image/*"
-        multiple={multiple ? true : undefined}
-        aria-label={title}
-        className="absolute inset-0 z-10 h-full w-full cursor-pointer text-base opacity-[0.02]"
-        ref={(el) => {
-          if (!el) return;
-          if (camera) el.setAttribute("capture", "environment");
-          else el.removeAttribute("capture");
-        }}
-        onPointerDown={prepare}
-        onChange={(e) => {
-          const picked = e.target.files ? Array.from(e.target.files) : [];
-          e.target.value = "";
-          if (picked.length) onFiles(multiple ? picked : picked.slice(0, 1));
-        }}
-      />
+    <div>
+      <p className="mb-1 text-xs font-medium text-[#2F2A24]">{title}</p>
+      <div ref={bind} className="h-11" />
     </div>
   );
 }
@@ -85,7 +116,10 @@ export function PhotoField({
   files: File[];
   onFiles: (files: File[]) => void;
 }) {
+  const [cameraSlot, setCameraSlot] = useState<HTMLDivElement | null>(null);
+  const [librarySlot, setLibrarySlot] = useState<HTMLDivElement | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  useBodyScrollable();
 
   useEffect(() => {
     if (!files[0]) {
@@ -119,10 +153,12 @@ export function PhotoField({
         <span className="text-sm font-medium text-[#2F2A24]">{label}</span>
         <span className="max-w-full truncate text-xs leading-relaxed text-[#6B6258]">{hint}</span>
       </div>
-      <div className="mt-3 flex flex-col gap-2">
-        <PhotoButton title="写真を撮る" camera onFiles={onFiles} />
-        <PhotoButton title={multiple ? "ライブラリから選ぶ（複数可）" : "ライブラリから選ぶ"} multiple={multiple} onFiles={onFiles} />
+      <div className="mt-3 flex flex-col gap-3 text-left">
+        <Slot title="写真を撮る" bind={setCameraSlot} />
+        <Slot title="ライブラリから選ぶ" bind={setLibrarySlot} />
       </div>
+      <LibraryInput slot={cameraSlot} title="写真を撮る" camera onFiles={onFiles} />
+      <LibraryInput slot={librarySlot} title="ライブラリから選ぶ" multiple={multiple} onFiles={onFiles} />
     </div>
   );
 }
