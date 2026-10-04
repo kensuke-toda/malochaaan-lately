@@ -4,6 +4,22 @@ import { useEffect, useState } from "react";
 
 const ACCEPT = "image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif";
 
+function ios26Library() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  if (!/iPhone|iPad|iPod/.test(ua)) return false;
+  const version = ua.match(/Version\/(\d+)/);
+  return version ? Number(version[1]) >= 26 : false;
+}
+
+async function copyFile(file: File) {
+  const bytes = await file.arrayBuffer();
+  return new File([bytes], file.name || "photo.jpg", {
+    type: file.type || "image/jpeg",
+    lastModified: file.lastModified,
+  });
+}
+
 export function useModalScrollLock() {
   useEffect(() => {
     const html = document.documentElement;
@@ -50,19 +66,25 @@ function FloatingFileInput({
 }) {
   useEffect(() => {
     if (!slot) return;
+    const confirmOnIos26 = !camera && ios26Library();
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ACCEPT;
+    input.className = "lately-photo-input";
     input.setAttribute("aria-label", title);
     if (camera) input.setAttribute("capture", "environment");
-    if (multiple) input.multiple = true;
+    if (multiple || confirmOnIos26) input.multiple = true;
     input.style.position = "fixed";
     input.style.zIndex = "80";
     input.style.margin = "0";
     input.style.padding = "0";
-    input.style.opacity = "0.02";
+    input.style.border = "0";
+    input.style.opacity = "1";
+    input.style.background = "transparent";
+    input.style.color = "transparent";
     input.style.fontSize = "16px";
     let frozen = false;
+    let reading = false;
     const place = () => {
       if (frozen) return;
       const rect = slot.getBoundingClientRect();
@@ -71,24 +93,44 @@ function FloatingFileInput({
       input.style.width = `${rect.width}px`;
       input.style.height = `${rect.height}px`;
     };
-    place();
+    const take = async () => {
+      if (reading) return;
+      const picked = input.files ? Array.from(input.files) : [];
+      if (!picked.length) return;
+      reading = true;
+      frozen = true;
+      try {
+        const copied: File[] = [];
+        for (const file of picked) copied.push(await copyFile(file));
+        input.value = "";
+        onFiles(multiple ? copied : copied.slice(0, 1));
+      } finally {
+        reading = false;
+        frozen = false;
+        place();
+      }
+    };
     const onPointerDown = () => {
       frozen = true;
     };
-    const onChange = () => {
-      const picked = input.files ? Array.from(input.files) : [];
-      input.value = "";
+    const onReturn = () => {
+      if (document.visibilityState === "hidden") return;
       frozen = false;
       place();
-      if (picked.length) onFiles(multiple ? picked : picked.slice(0, 1));
+      void take();
     };
+    place();
     input.addEventListener("pointerdown", onPointerDown);
-    input.addEventListener("change", onChange);
-    document.documentElement.appendChild(input);
+    input.addEventListener("change", () => void take());
+    document.addEventListener("visibilitychange", onReturn);
+    window.addEventListener("focus", onReturn);
     window.addEventListener("resize", place);
     window.addEventListener("scroll", place, true);
+    document.documentElement.appendChild(input);
     return () => {
       input.remove();
+      document.removeEventListener("visibilitychange", onReturn);
+      window.removeEventListener("focus", onReturn);
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
@@ -111,6 +153,30 @@ export function PhotoField({
   const [cameraSlot, setCameraSlot] = useState<HTMLDivElement | null>(null);
   const [librarySlot, setLibrarySlot] = useState<HTMLDivElement | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [ios26, setIos26] = useState(false);
+
+  useEffect(() => {
+    setIos26(ios26Library());
+  }, []);
+
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = `
+      input.lately-photo-input::file-selector-button,
+      input.lately-photo-input::-webkit-file-upload-button {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: transparent;
+        font-size: 16px;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, []);
 
   useEffect(() => {
     if (!files[0]) {
@@ -129,7 +195,9 @@ export function PhotoField({
   }, [files]);
 
   const hint = !files.length
-    ? "まだ選んでいません"
+    ? ios26
+      ? "チェックしたあと、右上の「追加」"
+      : "まだ選んでいません"
     : files.length === 1
       ? files[0].name
       : `${files.length} 枚選択中`;
