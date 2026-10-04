@@ -50,9 +50,12 @@ async function take(input: HTMLInputElement) {
   if (!picked.length) return;
 
   taking = true;
+  // Snapshot before awaits — React may unbind while iOS is dismissing.
+  const receiver = config;
+  const draftKey = receiver?.draftKey || resolveDraftKey();
+  const allowMultiple = Boolean(receiver?.allowMultiple);
+  const onPicked = receiver?.onPicked;
   try {
-    const draftKey = resolveDraftKey();
-    const allowMultiple = Boolean(config?.allowMultiple);
     const keep = allowMultiple ? picked : picked.slice(0, 1);
     // Clone before clearing — iOS can invalidate File references after dismiss.
     const clones = await cloneFiles(keep);
@@ -64,7 +67,7 @@ async function take(input: HTMLInputElement) {
     // Persist before clearing so a reload mid-write can still drain input.files.
     await setPhotoDraftAsync(draftKey, clones);
     input.value = "";
-    config?.onPicked?.(clones);
+    onPicked?.(clones);
     window.dispatchEvent(
       new CustomEvent("lately:photos-picked", {
         detail: { draftKey, count: clones.length },
