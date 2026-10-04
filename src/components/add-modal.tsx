@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type PointerEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   createBookAction,
@@ -98,16 +98,35 @@ function BookFields({ disabled, intent }: { disabled: boolean; intent: Intent })
         </select>
       )}
       <textarea name="memo" placeholder={intent === "want" ? "メモ" : "感想・メモ"} rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
-      <FileField name="image" label={coverUrl ? "カバー画像を選び直す" : "カバー画像を選択"} />
     </>
   );
 }
 
+function holdPageOverflow() {
+  const html = document.documentElement;
+  const body = document.body;
+  const prevHtml = html.style.overflow;
+  const prevBody = body.style.overflow;
+  html.style.overflow = "visible";
+  body.style.overflow = "visible";
+  let restored = false;
+  return () => {
+    if (restored) return;
+    restored = true;
+    html.style.overflow = prevHtml;
+    body.style.overflow = prevBody;
+  };
+}
+
 function FileField({ name, label, multiple }: { name: string; label: string; multiple?: boolean }) {
-  const formInputRef = useRef<HTMLInputElement>(null);
-  const pickerRef = useRef<HTMLInputElement | null>(null);
   const [hint, setHint] = useState("まだ選んでいません");
   const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
 
   function showFiles(files: FileList | null) {
     if (!files?.length) {
@@ -125,75 +144,43 @@ function FileField({ name, label, multiple }: { name: string; label: string; mul
     });
   }
 
-  const showFilesRef = useRef(showFiles);
-  showFilesRef.current = showFiles;
+  function preparePicker(event: PointerEvent<HTMLInputElement>) {
+    const restore = holdPageOverflow();
+    const input = event.currentTarget;
+    input.addEventListener("change", () => restore(), { once: true });
+    input.addEventListener("cancel", () => restore(), { once: true });
+    window.setTimeout(restore, 120000);
+  }
 
-  useEffect(() => {
-    const picker = document.createElement("input");
-    picker.type = "file";
-    picker.accept = "image/*";
-    if (multiple) picker.multiple = true;
-    picker.tabIndex = -1;
-    picker.setAttribute("aria-hidden", "true");
-    picker.style.cssText = "position:fixed;top:-120px;left:0;width:80px;height:80px;opacity:0.02";
-    picker.addEventListener("change", () => {
-      const files = picker.files;
-      const target = formInputRef.current;
-      if (!target || !files?.length) return;
+  function onFiles(event: FormEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    if (!multiple && input.files && input.files.length > 1) {
       const transfer = new DataTransfer();
-      for (const file of Array.from(files)) transfer.items.add(file);
-      target.files = transfer.files;
-      showFilesRef.current(target.files);
-      picker.value = "";
-    });
-    document.body.appendChild(picker);
-    pickerRef.current = picker;
-    return () => {
-      picker.remove();
-      if (pickerRef.current === picker) pickerRef.current = null;
-    };
-  }, [multiple]);
-
-  useEffect(() => {
-    return () => {
-      if (preview) URL.revokeObjectURL(preview);
-    };
-  }, [preview]);
-
-  function openPicker() {
-    const picker = pickerRef.current;
-    if (!picker) return;
-    // iOS will not open a photo picker for a file input inside this scrolling dialog.
-    const html = document.documentElement;
-    const body = document.body;
-    const prevHtmlOverflow = html.style.overflow;
-    const prevBodyOverflow = body.style.overflow;
-    html.style.overflow = "visible";
-    body.style.overflow = "visible";
-    picker.click();
-    html.style.overflow = prevHtmlOverflow;
-    body.style.overflow = prevBodyOverflow;
+      transfer.items.add(input.files[0]);
+      input.files = transfer.files;
+    }
+    showFiles(input.files);
   }
 
   return (
-    <div className="rounded-xl border border-dashed border-[#2F2A24]/30 bg-[#E8DFD0] px-3 py-4 text-center">
-      <button type="button" onClick={openPicker} className="flex w-full cursor-pointer flex-col items-center justify-center gap-1">
+    <div className="relative rounded-xl border border-dashed border-[#2F2A24]/30 bg-[#E8DFD0] px-3 py-4 text-center">
+      <div className="pointer-events-none flex flex-col items-center justify-center gap-1">
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={preview} alt="" className="mb-1 h-24 w-24 rounded-lg object-cover" />
         ) : null}
         <span className="text-sm font-medium text-[#2F2A24]">{label}</span>
         <span className="max-w-full truncate text-xs leading-relaxed text-[#6B6258]">{hint}</span>
-      </button>
+        <span className="text-[11px] leading-relaxed text-[#6B6258]">チェックしたあと、右上の「追加」で確定</span>
+      </div>
       <input
-        ref={formInputRef}
         name={name}
         type="file"
         accept="image/*"
-        multiple={multiple}
-        tabIndex={-1}
-        className="sr-only"
-        onChange={(e) => showFiles(e.target.files)}
+        multiple
+        className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+        onPointerDown={preparePicker}
+        onChange={onFiles}
       />
     </div>
   );
@@ -274,14 +261,15 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
         if (e.target === e.currentTarget && !pending) onClose();
       }}
     >
-      <div className="max-h-[min(calc(100dvh-env(safe-area-inset-top)),46rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl bg-[#F4EEE4] p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:rounded-2xl sm:pb-6">
-        <div className="mb-4 flex items-center justify-between">
+      <div className="flex max-h-[min(calc(100dvh-env(safe-area-inset-top)),46rem)] min-h-0 w-full max-w-md flex-col rounded-t-2xl bg-[#F4EEE4] sm:rounded-2xl">
+        <div className="flex items-center justify-between px-6 pt-6">
           <h3 className="font-display text-lg font-semibold">{titles[kind]}</h3>
           <button type="button" onClick={onClose} disabled={pending} className="min-h-11 min-w-11 text-[#6B6258]">
             ✕
           </button>
         </div>
-        <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
+        <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-6 py-4">
           <input type="hidden" name="intent" value={intent} />
           {kind === "place" && (
             <>
@@ -291,7 +279,6 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
                 <input name="visited_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               )}
               <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
-              <FileField name="image" label="お店の写真を選択" />
             </>
           )}
           {kind === "thing" && (
@@ -300,7 +287,6 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
               <input name="brand" placeholder="ブランド名" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <input name="product_url" type="url" placeholder="商品ページURL" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
-              <FileField name="image" label="写真を選択" />
             </>
           )}
           {kind === "book" && <BookFields disabled={pending} intent={intent} />}
@@ -310,7 +296,6 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
               <input name="artist" placeholder="アーティスト" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <input name="url" type="url" placeholder="リンク" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
-              <FileField name="image" label="ジャケット画像を選択" />
             </>
           )}
           {kind === "podcast" && (
@@ -319,7 +304,6 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
               <input name="artist" placeholder="番組・ホスト" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <input name="url" type="url" placeholder="リンク" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
-              <FileField name="image" label="カバー画像を選択" />
             </>
           )}
           {kind === "post" && (
@@ -334,14 +318,12 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
               {want ? null : (
                 <input name="entry_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               )}
-              <FileField name="photos" label="写真を選択（複数可）" multiple />
             </>
           )}
           {kind === "movie" && (
             <>
               <input name="title" required placeholder="タイトル（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <textarea name="body" placeholder={want ? "なぜ観たいか" : "感想"} rows={3} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
-              <FileField name="image" label="写真を選択" />
             </>
           )}
           {kind === "work" && (
@@ -351,14 +333,22 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
               <textarea name="summary" placeholder="サマリ" rows={4} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
             </>
           )}
-          {error ? <p className="text-sm text-[#B85C38]">{error}</p> : null}
-          <button
-            type="submit"
-            disabled={pending}
-            className="min-h-11 rounded-full bg-[#B85C38] px-4 py-2.5 text-sm font-semibold text-[#F4EEE4] disabled:opacity-60"
-          >
-            {pending ? "追加中…" : "追加する"}
-          </button>
+          </div>
+          <div className="flex flex-col gap-3 px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">
+            {kind === "place" ? <FileField name="image" label="お店の写真を選択" /> : null}
+            {kind === "thing" || kind === "movie" ? <FileField name="image" label="写真を選択" /> : null}
+            {kind === "book" || kind === "podcast" ? <FileField name="image" label="カバー画像を選択" /> : null}
+            {kind === "sound" ? <FileField name="image" label="ジャケット画像を選択" /> : null}
+            {kind === "post" ? <FileField name="photos" label="写真を選択（複数可）" multiple /> : null}
+            {error ? <p className="text-sm text-[#B85C38]">{error}</p> : null}
+            <button
+              type="submit"
+              disabled={pending}
+              className="min-h-11 rounded-full bg-[#B85C38] px-4 py-2.5 text-sm font-semibold text-[#F4EEE4] disabled:opacity-60"
+            >
+              {pending ? "追加中…" : "追加する"}
+            </button>
+          </div>
         </form>
       </div>
     </div>
