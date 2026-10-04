@@ -1,6 +1,7 @@
 "use client";
 
 import { readAddKind, readCorkOpen } from "@/lib/add-session";
+import { normalizePickedImage } from "@/lib/normalize-image";
 import { setPhotoDraftAsync } from "@/lib/photo-draft";
 
 const LIBRARY_ID = "lately-durable-library-input";
@@ -30,18 +31,16 @@ function resolveDraftKey() {
   return null;
 }
 
-async function cloneFiles(files: File[]) {
+async function prepareFiles(files: File[]) {
   const out: File[] = [];
   for (const file of files) {
-    const bytes = await file.arrayBuffer();
-    out.push(
-      new File([bytes], file.name || "photo.jpg", {
-        type: file.type || "image/jpeg",
-        lastModified: file.lastModified || Date.now(),
-      }),
-    );
+    out.push(await normalizePickedImage(file));
   }
   return out;
+}
+
+function emit(name: string, detail?: Record<string, unknown>) {
+  window.dispatchEvent(new CustomEvent(name, { detail }));
 }
 
 async function take(input: HTMLInputElement) {
@@ -55,10 +54,11 @@ async function take(input: HTMLInputElement) {
   const draftKey = receiver?.draftKey || resolveDraftKey();
   const allowMultiple = Boolean(receiver?.allowMultiple);
   const onPicked = receiver?.onPicked;
+  emit("lately:photos-picking", { draftKey });
   try {
     const keep = allowMultiple ? picked : picked.slice(0, 1);
-    // Clone before clearing — iOS can invalidate File references after dismiss.
-    const clones = await cloneFiles(keep);
+    // Normalize (HEIC → JPEG) before clearing — iOS can invalidate File refs after dismiss.
+    const clones = await prepareFiles(keep);
     if (!draftKey || !clones.length) {
       input.value = "";
       return;
@@ -68,13 +68,16 @@ async function take(input: HTMLInputElement) {
     await setPhotoDraftAsync(draftKey, clones);
     input.value = "";
     onPicked?.(clones);
-    window.dispatchEvent(
-      new CustomEvent("lately:photos-picked", {
-        detail: { draftKey, count: clones.length },
-      }),
-    );
+    emit("lately:photos-picked", { draftKey, count: clones.length });
+  } catch {
+    emit("lately:photos-pick-error", {
+      draftKey,
+      message:
+        "この写真を読み込めませんでした。スクショは通りやすいです。カメラ写真は一度「写真」アプリで開いてから選び直すか、設定で iCloud 写真のダウンロードを確認してください。",
+    });
   } finally {
     taking = false;
+    emit("lately:photos-pick-settled", { draftKey });
   }
 }
 
@@ -104,7 +107,8 @@ function ensureLibraryInput() {
   input = document.createElement("input");
   input.id = LIBRARY_ID;
   input.type = "file";
-  input.accept = "image/*";
+  // Include HEIC explicitly — camera roll photos on iPhone are often HEIC/HEIF.
+  input.accept = "image/*,image/heic,image/heif,.heic,.heif";
   input.multiple = false;
   input.setAttribute("autocomplete", "off");
   styleHidden(input);
@@ -120,7 +124,7 @@ function ensureCameraInput() {
   input = document.createElement("input");
   input.id = CAMERA_ID;
   input.type = "file";
-  input.accept = "image/*";
+  input.accept = "image/*,image/heic,image/heif,.heic,.heif";
   input.setAttribute("capture", "environment");
   input.multiple = false;
   input.setAttribute("autocomplete", "off");
