@@ -27,36 +27,38 @@ export function peekPhotoDraft(key: string): File[] {
   return memory.get(key) ?? [];
 }
 
-export function setPhotoDraft(key: string, files: File[]) {
+export async function setPhotoDraftAsync(key: string, files: File[]) {
   if (!files.length) {
     memory.delete(key);
-    void clearPhotoDraft(key);
+    await clearPhotoDraft(key);
     return;
   }
   memory.set(key, files);
-  void (async () => {
-    try {
-      const payload: StoredFile[] = [];
-      for (const file of files) {
-        payload.push({
-          name: file.name || "photo.jpg",
-          type: file.type || "image/jpeg",
-          lastModified: file.lastModified,
-          bytes: await file.arrayBuffer(),
-        });
-      }
-      const db = await openDb();
-      await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction(STORE, "readwrite");
-        tx.objectStore(STORE).put(payload, key);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error ?? new Error("IndexedDB write failed"));
+  try {
+    const payload: StoredFile[] = [];
+    for (const file of files) {
+      payload.push({
+        name: file.name || "photo.jpg",
+        type: file.type || "image/jpeg",
+        lastModified: file.lastModified,
+        bytes: await file.arrayBuffer(),
       });
-      db.close();
-    } catch {
-      // Best-effort only; in-memory draft still works for same document lifetime.
     }
-  })();
+    const db = await openDb();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).put(payload, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error ?? new Error("IndexedDB write failed"));
+    });
+    db.close();
+  } catch {
+    // Best-effort only; in-memory draft still works for same document lifetime.
+  }
+}
+
+export function setPhotoDraft(key: string, files: File[]) {
+  void setPhotoDraftAsync(key, files);
 }
 
 export async function loadPhotoDraft(key: string): Promise<File[]> {

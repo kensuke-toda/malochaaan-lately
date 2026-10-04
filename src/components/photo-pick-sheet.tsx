@@ -1,13 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  bindPhotoPicker,
+  cameraInputId,
+  libraryInputId,
+} from "@/lib/photo-picker";
+import { setPhotoDraftAsync } from "@/lib/photo-draft";
 
 type PhotoPickSheetProps = {
   multiple?: boolean;
+  draftKey: string;
   initialFiles: File[];
   onClose: () => void;
   onConfirm: (files: File[]) => void;
 };
+
+function subscribeNoop() {
+  return () => {};
+}
 
 function useObjectUrls(files: File[]) {
   const urls = useMemo(() => files.map((file) => URL.createObjectURL(file)), [files]);
@@ -19,32 +30,49 @@ function useObjectUrls(files: File[]) {
   return urls;
 }
 
-export function PhotoPickSheet({ multiple, initialFiles, onClose, onConfirm }: PhotoPickSheetProps) {
+export function PhotoPickSheet({
+  multiple,
+  draftKey,
+  initialFiles,
+  onClose,
+  onConfirm,
+}: PhotoPickSheetProps) {
   const allowMultiple = Boolean(multiple);
   const [files, setFiles] = useState<File[]>(initialFiles);
   const [selected, setSelected] = useState<number[]>(() => initialFiles.map((_, index) => index));
   const previews = useObjectUrls(files);
+  const libraryId = useSyncExternalStore(subscribeNoop, libraryInputId, () => "lately-durable-library-input");
+  const cameraId = useSyncExternalStore(subscribeNoop, cameraInputId, () => "lately-durable-camera-input");
+  const onConfirmRef = useRef(onConfirm);
+  const filesRef = useRef(files);
 
-  function addFiles(picked: File[]) {
-    if (!picked.length) return;
-    if (!allowMultiple) {
-      const next = picked.slice(0, 1);
-      setFiles(next);
-      setSelected(next.length ? [0] : []);
-      return;
-    }
-    const start = files.length;
-    const next = [...files, ...picked];
-    setFiles(next);
-    setSelected((current) => [...current, ...picked.map((_, index) => start + index)]);
-  }
+  useEffect(() => {
+    onConfirmRef.current = onConfirm;
+  }, [onConfirm]);
 
-  function handleInput(event: ChangeEvent<HTMLInputElement>) {
-    const input = event.currentTarget;
-    const picked = input.files ? Array.from(input.files) : [];
-    input.value = "";
-    addFiles(allowMultiple ? picked : picked.slice(0, 1));
-  }
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
+  useEffect(() => {
+    bindPhotoPicker({
+      draftKey,
+      allowMultiple,
+      onPicked: (picked) => {
+        if (!allowMultiple) {
+          // Single photo: land straight on the edit form with the pick applied.
+          onConfirmRef.current(picked);
+          return;
+        }
+        const start = filesRef.current.length;
+        const next = [...filesRef.current, ...picked];
+        setFiles(next);
+        setSelected((current) => [...current, ...picked.map((_, index) => start + index)]);
+        void setPhotoDraftAsync(draftKey, next);
+      },
+    });
+    return () => bindPhotoPicker(null);
+  }, [draftKey, allowMultiple]);
 
   function toggleSelect(index: number) {
     if (!allowMultiple) {
@@ -110,45 +138,33 @@ export function PhotoPickSheet({ multiple, initialFiles, onClose, onConfirm }: P
               );
             })}
 
-            <label className="relative flex h-24 w-24 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-[#F4EEE4]/30 bg-[#3A342E] text-xs text-[#F4EEE4]/80">
+            <label
+              htmlFor={libraryId}
+              className="relative flex h-24 w-24 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-[#F4EEE4]/30 bg-[#3A342E] text-xs text-[#F4EEE4]/80"
+            >
               <span className="text-2xl leading-none">＋</span>
               <span>追加</span>
-              <input
-                type="file"
-                accept="image/*"
-                multiple={allowMultiple || undefined}
-                onChange={handleInput}
-                className="absolute inset-0 cursor-pointer opacity-0"
-              />
             </label>
           </div>
 
           <div className="mt-4 space-y-2">
             <p className="text-xs text-[#F4EEE4]/55">追加方法</p>
             <div className="grid grid-cols-2 gap-2">
-              <label className="relative flex min-h-12 cursor-pointer items-center justify-center rounded-2xl bg-[#3A342E] text-sm font-medium">
+              <label
+                htmlFor={cameraId}
+                className="relative flex min-h-12 cursor-pointer items-center justify-center rounded-2xl bg-[#3A342E] text-sm font-medium"
+              >
                 カメラ
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleInput}
-                  className="absolute inset-0 cursor-pointer opacity-0"
-                />
               </label>
-              <label className="relative flex min-h-12 cursor-pointer items-center justify-center rounded-2xl bg-[#3A342E] text-sm font-medium">
-                ファイルから
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple={allowMultiple || undefined}
-                  onChange={handleInput}
-                  className="absolute inset-0 cursor-pointer opacity-0"
-                />
+              <label
+                htmlFor={libraryId}
+                className="relative flex min-h-12 cursor-pointer items-center justify-center rounded-2xl bg-[#3A342E] text-sm font-medium"
+              >
+                ライブラリ
               </label>
             </div>
             <p className="text-[11px] leading-relaxed text-[#F4EEE4]/45">
-              iPhone ではメニューの「ファイルを選択」が確実です。「フォトライブラリ」だと戻れないことがあります。
+              写真を選んだら右上のチェック（または「追加」）を押してください。戻ってきたら編集画面に反映します。
             </p>
           </div>
         </div>

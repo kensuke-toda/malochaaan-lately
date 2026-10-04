@@ -552,11 +552,30 @@ function AddPinModal({
 
   useEffect(() => {
     let active = true;
-    void loadPhotoDraft(CORK_DRAFT).then((files) => {
-      if (active && files.length) setPhotos(files);
-    });
+    const hydrate = () => {
+      const cached = peekPhotoDraft(CORK_DRAFT);
+      if (cached.length) {
+        setPhotos(cached);
+        return;
+      }
+      void loadPhotoDraft(CORK_DRAFT).then((files) => {
+        if (active && files.length) setPhotos(files);
+      });
+    };
+    hydrate();
+    const onPhotos = (event: Event) => {
+      const detail = (event as CustomEvent<{ draftKey?: string }>).detail;
+      if (detail?.draftKey && detail.draftKey !== CORK_DRAFT) return;
+      hydrate();
+    };
+    window.addEventListener("lately:photos-picked", onPhotos);
+    window.addEventListener("pageshow", hydrate);
+    window.addEventListener("focus", hydrate);
     return () => {
       active = false;
+      window.removeEventListener("lately:photos-picked", onPhotos);
+      window.removeEventListener("pageshow", hydrate);
+      window.removeEventListener("focus", hydrate);
     };
   }, []);
 
