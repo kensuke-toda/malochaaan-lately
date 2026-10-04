@@ -1,8 +1,17 @@
 "use client";
 
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useSyncExternalStore, type ChangeEvent } from "react";
 
-const ACCEPT = "image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif";
+const ACCEPT = "image/*";
+
+function isAppleTouchDevice() {
+  if (typeof navigator === "undefined") return false;
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function subscribeNoop() {
+  return () => {};
+}
 
 async function copyFile(file: File) {
   const bytes = await file.arrayBuffer();
@@ -20,6 +29,7 @@ export function useModalScrollLock() {
       htmlOverflow: html.style.overflow,
       bodyOverflow: body.style.overflow,
     };
+    // Keep the document scrollable so iOS can restore the page after PHPicker.
     html.style.overflow = "visible";
     body.style.overflow = "visible";
     return () => {
@@ -32,14 +42,18 @@ export function useModalScrollLock() {
 function FileButton({
   title,
   camera,
-  multiple,
+  allowMultiple,
   onFiles,
 }: {
   title: string;
   camera?: boolean;
-  multiple?: boolean;
+  allowMultiple: boolean;
   onFiles: (files: File[]) => void;
 }) {
+  // Library picks always use multiple so iOS PHPicker shows 「追加」.
+  // Single-select mode can leave a checkmark with no way to confirm.
+  const inputMultiple = camera ? allowMultiple : true;
+
   async function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget;
     const picked = input.files ? Array.from(input.files) : [];
@@ -53,22 +67,22 @@ function FileButton({
       }
     }
     input.value = "";
-    onFiles(multiple ? copied : copied.slice(0, 1));
+    onFiles(allowMultiple ? copied : copied.slice(0, 1));
   }
 
   return (
-    <div>
-      <p className="mb-1 text-center text-sm font-semibold text-[#2F2A24]">{title}</p>
+    <label className="relative flex min-h-11 cursor-pointer items-center justify-center rounded-full bg-[#2F2A24] px-3 text-sm font-semibold text-[#F4EEE4]">
+      {title}
       <input
         type="file"
         accept={ACCEPT}
         capture={camera ? "environment" : undefined}
-        multiple={multiple ? true : undefined}
+        multiple={inputMultiple || undefined}
         aria-label={title}
         onChange={handleChange}
-        className="block w-full min-h-11 rounded-full bg-[#2F2A24] text-base text-[#2F2A24] file:w-full file:min-h-11 file:cursor-pointer file:rounded-full file:border-0 file:bg-[#2F2A24] file:px-3 file:text-sm file:font-semibold file:text-[#F4EEE4]"
+        className="absolute inset-0 z-10 block h-full w-full cursor-pointer opacity-0"
       />
-    </div>
+    </label>
   );
 }
 
@@ -83,25 +97,25 @@ export function PhotoField({
   files: File[];
   onFiles: (files: File[]) => void;
 }) {
-  const [preview, setPreview] = useState<string | null>(null);
+  const allowMultiple = Boolean(multiple);
+  const appleTouch = useSyncExternalStore(subscribeNoop, isAppleTouchDevice, () => false);
+  const preview = useMemo(() => (files[0] ? URL.createObjectURL(files[0]) : null), [files]);
 
   useEffect(() => {
-    if (!files[0]) {
-      setPreview((current) => {
-        if (current) URL.revokeObjectURL(current);
-        return null;
-      });
-      return;
-    }
-    const url = URL.createObjectURL(files[0]);
-    setPreview((current) => {
-      if (current) URL.revokeObjectURL(current);
-      return url;
-    });
-    return () => URL.revokeObjectURL(url);
-  }, [files]);
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
 
-  const hint = !files.length ? "まだ選んでいません" : files.length === 1 ? files[0].name : `${files.length} 枚選択中`;
+  const hint = !files.length
+    ? appleTouch
+      ? allowMultiple
+        ? "写真を選んで右上の「追加」"
+        : "1枚選んで右上の「追加」"
+      : "まだ選んでいません"
+    : files.length === 1
+      ? files[0].name
+      : `${files.length} 枚選択中`;
 
   return (
     <div className="rounded-xl border border-dashed border-[#2F2A24]/30 bg-[#E8DFD0] px-3 py-4 text-center">
@@ -114,8 +128,8 @@ export function PhotoField({
         <span className="max-w-full truncate text-xs leading-relaxed text-[#6B6258]">{hint}</span>
       </div>
       <div className="mt-3 flex flex-col gap-2">
-        <FileButton title="写真を撮る" camera onFiles={onFiles} />
-        <FileButton title="ライブラリから選ぶ" multiple={multiple} onFiles={onFiles} />
+        <FileButton title="写真を撮る" camera allowMultiple={allowMultiple} onFiles={onFiles} />
+        <FileButton title="ライブラリから選ぶ" allowMultiple={allowMultiple} onFiles={onFiles} />
       </div>
     </div>
   );
