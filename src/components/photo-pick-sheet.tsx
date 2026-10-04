@@ -172,26 +172,23 @@ export function PhotoPickSheet({
           </div>
 
           <div className="mt-4 space-y-2">
-            <p className="text-xs text-[#F4EEE4]/55">追加方法</p>
-            <div className="grid grid-cols-2 gap-2">
-              <label
-                htmlFor={cameraId}
-                className="relative flex min-h-12 cursor-pointer items-center justify-center rounded-2xl bg-[#3A342E] text-sm font-medium"
-              >
-                カメラ
-              </label>
-              <label
-                htmlFor={libraryId}
-                className="relative flex min-h-12 cursor-pointer items-center justify-center rounded-2xl bg-[#3A342E] text-sm font-medium"
-              >
-                ライブラリ
-              </label>
-            </div>
+            <label
+              htmlFor={libraryId}
+              className="relative flex min-h-12 cursor-pointer items-center justify-center rounded-2xl bg-[#F4EEE4] text-sm font-semibold text-[#2F2A24]"
+            >
+              写真ライブラリから選ぶ
+            </label>
+            <label
+              htmlFor={cameraId}
+              className="relative flex min-h-11 cursor-pointer items-center justify-center rounded-2xl bg-[#3A342E] text-sm font-medium text-[#F4EEE4]/80"
+            >
+              その場で撮影
+            </label>
             <p className="text-[11px] leading-relaxed text-[#F4EEE4]/45">
               {allowMultiple
                 ? "写真にチェックを付けたら、右上の「追加」を押してください。"
                 : "写真を1枚チェックしたら、右上の「追加」を押してください。写真の青チェックだけでは戻りません。"}
-              カメラで撮った写真がうまくいかないときは、この画面の「カメラ」から撮るのが確実です。
+              うまく読み込めないときは、写真アプリでその写真を一度開いてから選び直してください。
             </p>
             {loading ? <p className="text-sm font-medium text-[#F4EEE4]">読み込み中…</p> : null}
             {error ? <p className="text-sm leading-relaxed text-[#F0A090]">{error}</p> : null}

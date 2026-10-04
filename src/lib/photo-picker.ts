@@ -37,6 +37,16 @@ function libraryNeedsMultipleAttribute(allowMultiple: boolean) {
   return allowMultiple || isAppleTouchDevice();
 }
 
+/**
+ * On iPhone, ask for JPEG/PNG so the OS transcodes camera HEIC before handing
+ * the file to the page. Accepting image/* / heic often returns unreadable HEIC
+ * blobs (or empty iCloud placeholders) and the edit screen never updates.
+ */
+function libraryAccept() {
+  if (isAppleTouchDevice()) return "image/jpeg,image/png,.jpg,.jpeg,.png";
+  return "image/*,image/heic,image/heif,.heic,.heif";
+}
+
 function resolveDraftKey() {
   if (config?.draftKey) return config.draftKey;
   const kind = readAddKind();
@@ -65,7 +75,7 @@ function showLoadingOverlay(message: string) {
     el.id = LOADING_ID;
     el.setAttribute("role", "status");
     el.style.cssText =
-      "position:fixed;inset:0;z-index:2147483646;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(47,42,36,0.72);color:#F4EEE4;font:600 15px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;text-align:center";
+      "position:fixed;inset:0;z-index:2147483646;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(47,42,36,0.72);color:#F4EEE4;font:600 15px/1.5 -apple-system,BlinkMacSystemFont,sans-serif;text-align:center;white-space:pre-line";
     document.documentElement.appendChild(el);
   }
   el.textContent = message;
@@ -92,7 +102,7 @@ async function take(input: HTMLInputElement) {
   showLoadingOverlay("写真を読み込み中…\nそのまま待ってください");
   try {
     const keep = allowMultiple ? picked : picked.slice(0, 1);
-    // Normalize (HEIC → JPEG) before clearing — iOS can invalidate File refs after dismiss.
+    // Normalize before clearing — iOS can invalidate File refs after dismiss.
     const clones = await prepareFiles(keep);
     if (!draftKey || !clones.length) {
       input.value = "";
@@ -108,7 +118,7 @@ async function take(input: HTMLInputElement) {
     emit("lately:photos-pick-error", {
       draftKey,
       message:
-        "カメラで撮った写真を読み込めませんでした。下の「カメラ」から撮り直すか、写真アプリでその写真を開いて（ダウンロードして）から、もう一度ライブラリで選んでください。",
+        "この写真を読み込めませんでした。iCloudのみの写真のことがあります。「写真」アプリでその写真を開いてダウンロードしてから、もう一度選んでください。",
     });
   } finally {
     taking = false;
@@ -138,13 +148,16 @@ function wire(input: HTMLInputElement) {
 
 function ensureLibraryInput() {
   let input = document.getElementById(LIBRARY_ID) as HTMLInputElement | null;
-  if (input) return input;
+  const accept = libraryAccept();
+  if (input) {
+    input.accept = accept;
+    return input;
+  }
 
   input = document.createElement("input");
   input.id = LIBRARY_ID;
   input.type = "file";
-  // Include HEIC explicitly — camera roll photos on iPhone are often HEIC/HEIF.
-  input.accept = "image/*,image/heic,image/heif,.heic,.heif";
+  input.accept = accept;
   // Default on for iPhone so the first open already has 追加 available.
   input.multiple = isAppleTouchDevice();
   input.setAttribute("autocomplete", "off");
@@ -161,7 +174,7 @@ function ensureCameraInput() {
   input = document.createElement("input");
   input.id = CAMERA_ID;
   input.type = "file";
-  input.accept = "image/*,image/heic,image/heif,.heic,.heif";
+  input.accept = "image/jpeg,image/png,.jpg,.jpeg,.png";
   input.setAttribute("capture", "environment");
   input.multiple = false;
   input.setAttribute("autocomplete", "off");
@@ -178,6 +191,7 @@ export function bindPhotoPicker(next: PhotoPickerReceiver | null) {
   if (next) {
     config = next;
     library.multiple = libraryNeedsMultipleAttribute(next.allowMultiple);
+    library.accept = libraryAccept();
   } else if (config) {
     // Keep draft key across unmounts so a late change event is not dropped.
     config = { ...config, onPicked: null };
