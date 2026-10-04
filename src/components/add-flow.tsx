@@ -1,8 +1,9 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { AddModal, type ModalKind } from "@/components/add-modal";
+import { clearPhotoDraft } from "@/lib/photo-draft";
 import type { Intent } from "@/types";
 
 const happenedKinds: { kind: ModalKind; label: string }[] = [
@@ -25,6 +26,28 @@ const wantKinds: { kind: ModalKind; label: string }[] = [
   { kind: "podcast", label: "聴きたいポッドキャスト" },
   { kind: "work", label: "やりたい仕事" },
 ];
+
+const KIND_SET = new Set<string>(happenedKinds.map((item) => item.kind));
+
+function isModalKind(value: string | null | undefined): value is ModalKind {
+  return Boolean(value && KIND_SET.has(value));
+}
+
+function readAddKindFromUrl() {
+  if (typeof window === "undefined") return null;
+  const value = new URLSearchParams(window.location.search).get("add");
+  return isModalKind(value) ? value : null;
+}
+
+function writeAddKindToUrl(kind: ModalKind | null) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (kind) url.searchParams.set("add", kind);
+  else url.searchParams.delete("add");
+  const next = `${url.pathname}${url.search}${url.hash}`;
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (next !== current) window.history.replaceState(window.history.state, "", next);
+}
 
 type AddFlowValue = {
   loggedIn: boolean;
@@ -52,21 +75,52 @@ export function AddFlowProvider({
   const kinds = intent === "want" ? wantKinds : happenedKinds;
   const [picker, setPicker] = useState(false);
   const [kind, setKind] = useState<ModalKind | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const restore = () => {
+      if (!loggedIn) {
+        writeAddKindToUrl(null);
+        setKind(null);
+        setHydrated(true);
+        return;
+      }
+      setKind(readAddKindFromUrl());
+      setHydrated(true);
+    };
+    restore();
+    window.addEventListener("pageshow", restore);
+    return () => window.removeEventListener("pageshow", restore);
+  }, [loggedIn, pathname]);
+
+  function openKind(next: ModalKind) {
+    setPicker(false);
+    setKind(next);
+    writeAddKindToUrl(next);
+  }
+
+  function closeKind() {
+    if (kind) void clearPhotoDraft(`add:${kind}`);
+    setKind(null);
+    writeAddKindToUrl(null);
+  }
 
   function openAdd(next?: ModalKind) {
     if (!loggedIn) return;
     if (next) {
-      setPicker(false);
-      setKind(next);
+      openKind(next);
       return;
     }
     setKind(null);
+    writeAddKindToUrl(null);
     setPicker(true);
   }
 
+  const activeKind = loggedIn && hydrated ? kind : null;
+
   return (
     <AddFlowContext.Provider value={{ loggedIn, intent, openAdd }}>
-      <div className={kind ? "hidden" : undefined}>{children}</div>
+      <div className={activeKind ? "hidden" : undefined}>{children}</div>
       {picker ? (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-[#2F2A24]/40 sm:items-center sm:p-4"
@@ -87,10 +141,7 @@ export function AddFlowProvider({
                   key={item.kind}
                   type="button"
                   className="min-h-14 rounded-xl bg-[#E8DFD0] px-3 py-3 text-sm font-medium"
-                  onClick={() => {
-                    setPicker(false);
-                    setKind(item.kind);
-                  }}
+                  onClick={() => openKind(item.kind)}
                 >
                   {item.label}
                 </button>
@@ -99,7 +150,7 @@ export function AddFlowProvider({
           </div>
         </div>
       ) : null}
-      {kind ? <AddModal kind={kind} intent={intent} onClose={() => setKind(null)} /> : null}
+      {activeKind ? <AddModal key={activeKind} kind={activeKind} intent={intent} onClose={closeKind} /> : null}
     </AddFlowContext.Provider>
   );
 }

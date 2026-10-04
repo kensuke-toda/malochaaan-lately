@@ -3,8 +3,26 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { createPinAction, deletePinAction, updatePinLayoutAction } from "@/app/actions";
 import { PhotoField, useModalScrollLock } from "@/components/photo-field";
+import { clearPhotoDraft, loadPhotoDraft, peekPhotoDraft, setPhotoDraft } from "@/lib/photo-draft";
 import { authorName } from "@/lib/utils";
 import type { Pin, Profile } from "@/types";
+
+const CORK_DRAFT = "cork:pin";
+
+function readCorkOpen() {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("cork") === "1";
+}
+
+function writeCorkOpen(open: boolean) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (open) url.searchParams.set("cork", "1");
+  else url.searchParams.delete("cork");
+  const next = `${url.pathname}${url.search}${url.hash}`;
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (next !== current) window.history.replaceState(window.history.state, "", next);
+}
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
@@ -201,6 +219,27 @@ export function Corkboard({
   const showAdd = Boolean(loggedIn && userId && activeId === userId);
 
   useEffect(() => {
+    if (!loggedIn) return;
+    const onPageShow = () => {
+      if (readCorkOpen()) setAdding(true);
+    };
+    onPageShow();
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, [loggedIn]);
+
+  function openAdding() {
+    setAdding(true);
+    writeCorkOpen(true);
+  }
+
+  function closeAdding() {
+    void clearPhotoDraft(CORK_DRAFT);
+    setAdding(false);
+    writeCorkOpen(false);
+  }
+
+  useEffect(() => {
     const root = scrollerRef.current;
     if (!root) return;
     const panes = [...root.children];
@@ -226,7 +265,7 @@ export function Corkboard({
           showAdd ? (
             <button
               type="button"
-              onClick={() => setAdding(true)}
+              onClick={openAdding}
               className="shrink-0 rounded-full bg-[#B85C38] px-3 py-1.5 text-xs font-semibold text-[#F4EEE4]"
             >
               ＋ 貼る
@@ -253,7 +292,7 @@ export function Corkboard({
       </div>
       {adding ? (
         <AddPinModal
-          onClose={() => setAdding(false)}
+          onClose={closeAdding}
           defaultX={0.28 + Math.random() * 0.44}
           defaultY={0.32 + Math.random() * 0.36}
           defaultRotation={Math.round((Math.random() - 0.5) * 22)}
@@ -522,8 +561,23 @@ function AddPinModal({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [photos, setPhotos] = useState<File[]>([]);
+  const [photos, setPhotos] = useState<File[]>(() => peekPhotoDraft(CORK_DRAFT));
   useModalScrollLock();
+
+  useEffect(() => {
+    let active = true;
+    void loadPhotoDraft(CORK_DRAFT).then((files) => {
+      if (active && files.length) setPhotos(files);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  function updatePhotos(next: File[]) {
+    setPhotoDraft(CORK_DRAFT, next);
+    setPhotos(next);
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -542,6 +596,7 @@ function AddPinModal({
         setError(result.error);
         return;
       }
+      await clearPhotoDraft(CORK_DRAFT);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存に失敗しました");
@@ -566,7 +621,7 @@ function AddPinModal({
         <input type="hidden" name="y" value={defaultY} />
         <input type="hidden" name="rotation" value={defaultRotation} />
         <div className="flex flex-col gap-3">
-          <PhotoField label="写真を選択" files={photos} onFiles={setPhotos} />
+          <PhotoField label="写真を選択" files={photos} onFiles={updatePhotos} />
           <input name="memo" placeholder="メモ（任意）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
           {error ? <p className="text-sm text-[#B85C38]">{error}</p> : null}
           <button

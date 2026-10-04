@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   createBookAction,
@@ -15,6 +15,7 @@ import {
 } from "@/app/actions";
 import { BookIsbnLookup } from "@/components/book-isbn-lookup";
 import { PhotoField, useModalScrollLock } from "@/components/photo-field";
+import { clearPhotoDraft, loadPhotoDraft, peekPhotoDraft, setPhotoDraft } from "@/lib/photo-draft";
 import { todayKey } from "@/lib/utils";
 import type { Intent } from "@/types";
 
@@ -141,8 +142,24 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
   const today = todayKey();
   const router = useRouter();
   useModalScrollLock();
-  const [photos, setPhotos] = useState<File[]>([]);
+  const draftKey = `add:${kind}`;
+  const [photos, setPhotos] = useState<File[]>(() => peekPhotoDraft(draftKey));
   const photoKey = kind === "post" ? "photos" : "image";
+
+  useEffect(() => {
+    let active = true;
+    void loadPhotoDraft(draftKey).then((files) => {
+      if (active && files.length) setPhotos(files);
+    });
+    return () => {
+      active = false;
+    };
+  }, [draftKey]);
+
+  function updatePhotos(next: File[]) {
+    setPhotoDraft(draftKey, next);
+    setPhotos(next);
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -160,6 +177,7 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
         setError(result.error);
         return;
       }
+      await clearPhotoDraft(draftKey);
       router.refresh();
       onClose();
     } catch (err) {
@@ -248,11 +266,11 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
           )}
           </div>
           <div className="flex flex-col gap-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-            {kind === "place" ? <PhotoField label="お店の写真を選択" files={photos} onFiles={setPhotos} /> : null}
-            {kind === "thing" || kind === "movie" ? <PhotoField label="写真を選択" files={photos} onFiles={setPhotos} /> : null}
-            {kind === "book" || kind === "podcast" ? <PhotoField label="カバー画像を選択" files={photos} onFiles={setPhotos} /> : null}
-            {kind === "sound" ? <PhotoField label="ジャケット画像を選択" files={photos} onFiles={setPhotos} /> : null}
-            {kind === "post" && !want ? <PhotoField label="写真を選択（複数可）" multiple files={photos} onFiles={setPhotos} /> : null}
+            {kind === "place" ? <PhotoField label="お店の写真を選択" files={photos} onFiles={updatePhotos} /> : null}
+            {kind === "thing" || kind === "movie" ? <PhotoField label="写真を選択" files={photos} onFiles={updatePhotos} /> : null}
+            {kind === "book" || kind === "podcast" ? <PhotoField label="カバー画像を選択" files={photos} onFiles={updatePhotos} /> : null}
+            {kind === "sound" ? <PhotoField label="ジャケット画像を選択" files={photos} onFiles={updatePhotos} /> : null}
+            {kind === "post" && !want ? <PhotoField label="写真を選択（複数可）" multiple files={photos} onFiles={updatePhotos} /> : null}
             {error ? <p className="text-sm text-[#B85C38]">{error}</p> : null}
             <button
               type="submit"
