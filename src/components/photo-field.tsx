@@ -1,26 +1,41 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useState } from "react";
 
 const ACCEPT = "image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif";
 
-function useBodyScrollable() {
+export function useModalScrollLock() {
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
-    const prevHtml = html.style.overflow;
-    const prevBody = body.style.overflow;
+    const scrollY = window.scrollY;
+    const prev = {
+      htmlOverflow: html.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyLeft: body.style.left,
+      bodyRight: body.style.right,
+      bodyWidth: body.style.width,
+    };
     html.style.overflow = "visible";
-    body.style.overflow = "visible";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
     return () => {
-      html.style.overflow = prevHtml;
-      body.style.overflow = prevBody;
+      html.style.overflow = prev.htmlOverflow;
+      body.style.position = prev.bodyPosition;
+      body.style.top = prev.bodyTop;
+      body.style.left = prev.bodyLeft;
+      body.style.right = prev.bodyRight;
+      body.style.width = prev.bodyWidth;
+      window.scrollTo(0, scrollY);
     };
   }, []);
 }
 
-function LibraryInput({
+function FloatingFileInput({
   slot,
   title,
   camera,
@@ -33,76 +48,53 @@ function LibraryInput({
   multiple?: boolean;
   onFiles: (files: File[]) => void;
 }) {
-  const frozen = useRef(false);
-  const [box, setBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
-
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!slot) return;
-    const update = () => {
-      if (frozen.current) return;
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ACCEPT;
+    input.setAttribute("aria-label", title);
+    if (camera) input.setAttribute("capture", "environment");
+    if (multiple) input.multiple = true;
+    input.style.position = "fixed";
+    input.style.zIndex = "80";
+    input.style.margin = "0";
+    input.style.padding = "0";
+    input.style.opacity = "0.02";
+    input.style.fontSize = "16px";
+    let frozen = false;
+    const place = () => {
+      if (frozen) return;
       const rect = slot.getBoundingClientRect();
-      setBox({
-        top: window.scrollY + rect.top,
-        left: window.scrollX + rect.left,
-        width: rect.width,
-        height: Math.max(rect.height, 44),
-      });
+      input.style.top = `${rect.top}px`;
+      input.style.left = `${rect.left}px`;
+      input.style.width = `${rect.width}px`;
+      input.style.height = `${rect.height}px`;
     };
-    update();
-    window.addEventListener("resize", update);
-    window.addEventListener("scroll", update, true);
+    place();
+    const onPointerDown = () => {
+      frozen = true;
+    };
+    const onChange = () => {
+      const picked = input.files ? Array.from(input.files) : [];
+      input.value = "";
+      frozen = false;
+      place();
+      if (picked.length) onFiles(multiple ? picked : picked.slice(0, 1));
+    };
+    input.addEventListener("pointerdown", onPointerDown);
+    input.addEventListener("change", onChange);
+    document.documentElement.appendChild(input);
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
     return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update, true);
+      input.remove();
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
     };
-  }, [slot]);
+  }, [slot, title, camera, multiple, onFiles]);
 
-  if (!box) return null;
-
-  return createPortal(
-    <input
-      type="file"
-      accept={ACCEPT}
-      multiple={multiple ? true : undefined}
-      aria-label={title}
-      ref={(el) => {
-        if (!el) return;
-        if (camera) el.setAttribute("capture", "environment");
-        else el.removeAttribute("capture");
-      }}
-      onPointerDown={() => {
-        frozen.current = true;
-      }}
-      onChange={(e) => {
-        const picked = e.target.files ? Array.from(e.target.files) : [];
-        e.target.value = "";
-        frozen.current = false;
-        if (picked.length) onFiles(multiple ? picked : picked.slice(0, 1));
-      }}
-      style={{
-        position: "absolute",
-        top: box.top,
-        left: box.left,
-        width: box.width,
-        height: box.height,
-        zIndex: 80,
-        margin: 0,
-        opacity: 1,
-        fontSize: 16,
-      }}
-      className="text-[0px] file:h-full file:w-full file:rounded-full file:border-0 file:bg-[#2F2A24] file:text-sm file:font-semibold file:text-[#F4EEE4]"
-    />,
-    document.body,
-  );
-}
-
-function Slot({ title, bind }: { title: string; bind: (node: HTMLDivElement | null) => void }) {
-  return (
-    <div>
-      <p className="mb-1 text-xs font-medium text-[#2F2A24]">{title}</p>
-      <div ref={bind} className="h-11" />
-    </div>
-  );
+  return null;
 }
 
 export function PhotoField({
@@ -119,7 +111,6 @@ export function PhotoField({
   const [cameraSlot, setCameraSlot] = useState<HTMLDivElement | null>(null);
   const [librarySlot, setLibrarySlot] = useState<HTMLDivElement | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  useBodyScrollable();
 
   useEffect(() => {
     if (!files[0]) {
@@ -153,12 +144,16 @@ export function PhotoField({
         <span className="text-sm font-medium text-[#2F2A24]">{label}</span>
         <span className="max-w-full truncate text-xs leading-relaxed text-[#6B6258]">{hint}</span>
       </div>
-      <div className="mt-3 flex flex-col gap-3 text-left">
-        <Slot title="写真を撮る" bind={setCameraSlot} />
-        <Slot title="ライブラリから選ぶ" bind={setLibrarySlot} />
+      <div className="mt-3 flex flex-col gap-2">
+        <div ref={setCameraSlot} className="flex min-h-11 items-center justify-center rounded-full bg-[#2F2A24] px-3 text-sm font-semibold text-[#F4EEE4]">
+          写真を撮る
+        </div>
+        <div ref={setLibrarySlot} className="flex min-h-11 items-center justify-center rounded-full bg-[#2F2A24] px-3 text-sm font-semibold text-[#F4EEE4]">
+          ライブラリから選ぶ
+        </div>
       </div>
-      <LibraryInput slot={cameraSlot} title="写真を撮る" camera onFiles={onFiles} />
-      <LibraryInput slot={librarySlot} title="ライブラリから選ぶ" multiple={multiple} onFiles={onFiles} />
+      <FloatingFileInput slot={cameraSlot} title="写真を撮る" camera onFiles={onFiles} />
+      <FloatingFileInput slot={librarySlot} title="ライブラリから選ぶ" multiple={multiple} onFiles={onFiles} />
     </div>
   );
 }

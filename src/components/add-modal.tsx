@@ -14,7 +14,7 @@ import {
   type BookLookupResult,
 } from "@/app/actions";
 import { BookIsbnLookup } from "@/components/book-isbn-lookup";
-import { PhotoField } from "@/components/photo-field";
+import { PhotoField, useModalScrollLock } from "@/components/photo-field";
 import { todayKey } from "@/lib/utils";
 import type { Intent } from "@/types";
 
@@ -140,6 +140,7 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
   };
   const today = todayKey();
   const router = useRouter();
+  useModalScrollLock();
   const [photos, setPhotos] = useState<File[]>([]);
   const photoKey = kind === "post" ? "photos" : "image";
 

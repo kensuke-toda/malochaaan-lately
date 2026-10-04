@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { createPinAction, deletePinAction, updatePinLayoutAction } from "@/app/actions";
-import { PhotoField } from "@/components/photo-field";
+import { PhotoField, useModalScrollLock } from "@/components/photo-field";
 import { authorName } from "@/lib/utils";
 import type { Pin, Profile } from "@/types";
 
@@ -523,6 +523,7 @@ function AddPinModal({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [photos, setPhotos] = useState<File[]>([]);
+  useModalScrollLock();
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
