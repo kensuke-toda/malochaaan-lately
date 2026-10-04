@@ -56,7 +56,7 @@ export function PhotoField({
   }, [draftKey]);
 
   const hint = !files.length
-    ? "ライブラリまたはカメラから選ぶ"
+    ? "写真ライブラリから選ぶ"
     : files.length === 1
       ? files[0].name
       : `${files.length} 枚選択中`;
