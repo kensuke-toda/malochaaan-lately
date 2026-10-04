@@ -1,16 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useSyncExternalStore } from "react";
-import { pickPhotos } from "@/lib/photo-picker";
-
-function isAppleTouchDevice() {
-  if (typeof navigator === "undefined") return false;
-  return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-}
-
-function subscribeNoop() {
-  return () => {};
-}
+import { useEffect, useMemo, type ChangeEvent } from "react";
 
 export function useModalScrollLock() {
   useEffect(() => {
@@ -29,6 +19,46 @@ export function useModalScrollLock() {
   }, []);
 }
 
+function FileButton({
+  title,
+  camera,
+  multiple,
+  onFiles,
+}: {
+  title: string;
+  camera?: boolean;
+  multiple?: boolean;
+  onFiles: (files: File[]) => void;
+}) {
+  function handleChange(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const picked = input.files ? Array.from(input.files) : [];
+    input.value = "";
+    if (!picked.length) return;
+    onFiles(multiple ? picked : picked.slice(0, 1));
+  }
+
+  return (
+    <label className="relative flex min-h-11 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-[#2F2A24] px-3 text-sm font-semibold text-[#F4EEE4]">
+      <span className="pointer-events-none">{title}</span>
+      {/*
+        iOS: the user must tap the <input> itself. Programmatic input.click() can open
+        a photo picker without a working confirm control.
+        Keep this single-select unless the field explicitly allows multiple.
+      */}
+      <input
+        type="file"
+        accept="image/*"
+        capture={camera ? "environment" : undefined}
+        multiple={multiple ? true : undefined}
+        aria-label={title}
+        onChange={handleChange}
+        className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-[0.01]"
+      />
+    </label>
+  );
+}
+
 export function PhotoField({
   label,
   multiple,
@@ -41,7 +71,6 @@ export function PhotoField({
   onFiles: (files: File[]) => void;
 }) {
   const allowMultiple = Boolean(multiple);
-  const appleTouch = useSyncExternalStore(subscribeNoop, isAppleTouchDevice, () => false);
   const preview = useMemo(() => (files[0] ? URL.createObjectURL(files[0]) : null), [files]);
 
   useEffect(() => {
@@ -51,9 +80,9 @@ export function PhotoField({
   }, [preview]);
 
   const hint = !files.length
-    ? appleTouch
-      ? "1枚選んで右上の「追加」を押す"
-      : "まだ選んでいません"
+    ? allowMultiple
+      ? "写真を選べます"
+      : "写真を1枚タップ"
     : files.length === 1
       ? files[0].name
       : `${files.length} 枚選択中`;
@@ -69,20 +98,8 @@ export function PhotoField({
         <span className="max-w-full truncate text-xs leading-relaxed text-[#6B6258]">{hint}</span>
       </div>
       <div className="mt-3 flex flex-col gap-2">
-        <button
-          type="button"
-          className="flex min-h-11 items-center justify-center rounded-full bg-[#2F2A24] px-3 text-sm font-semibold text-[#F4EEE4]"
-          onClick={() => pickPhotos({ multiple: allowMultiple, camera: true, onFiles })}
-        >
-          写真を撮る
-        </button>
-        <button
-          type="button"
-          className="flex min-h-11 items-center justify-center rounded-full bg-[#2F2A24] px-3 text-sm font-semibold text-[#F4EEE4]"
-          onClick={() => pickPhotos({ multiple: allowMultiple, onFiles })}
-        >
-          ライブラリから選ぶ
-        </button>
+        <FileButton title="写真を撮る" camera multiple={allowMultiple} onFiles={onFiles} />
+        <FileButton title="ライブラリから選ぶ" multiple={allowMultiple} onFiles={onFiles} />
       </div>
     </div>
   );
