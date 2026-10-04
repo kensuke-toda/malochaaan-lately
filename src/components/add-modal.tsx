@@ -170,18 +170,8 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[#2F2A24]/40 p-0 sm:items-center sm:p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !pending) onClose();
-      }}
-    >
-      <div
-        data-add-sheet
-        className="flex max-h-[min(calc(100dvh-env(safe-area-inset-top)),46rem)] w-full max-w-md flex-col rounded-t-2xl bg-[#F4EEE4] sm:rounded-2xl"
-      >
-        <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pt-6">
+    <div className="min-h-dvh w-full bg-[#F4EEE4]">
+        <form className="mx-auto flex w-full max-w-md flex-col gap-3 px-6 pt-6" onSubmit={handleSubmit}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-display text-lg font-semibold">{titles[kind]}</h3>
             <button type="button" onClick={onClose} disabled={pending} className="min-h-11 min-w-11 text-[#6B6258]">
@@ -257,8 +247,7 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
             </>
           )}
           </div>
-          </div>
-          <div className="flex flex-col gap-3 px-6 pt-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">
+          <div className="flex flex-col gap-3 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
             {kind === "place" ? <PhotoField label="お店の写真を選択" files={photos} onFiles={setPhotos} /> : null}
             {kind === "thing" || kind === "movie" ? <PhotoField label="写真を選択" files={photos} onFiles={setPhotos} /> : null}
             {kind === "book" || kind === "podcast" ? <PhotoField label="カバー画像を選択" files={photos} onFiles={setPhotos} /> : null}
@@ -274,7 +263,6 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
             </button>
           </div>
         </form>
-      </div>
     </div>
   );
 }

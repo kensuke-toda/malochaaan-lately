@@ -66,7 +66,7 @@ export function AddFlowProvider({
 
   return (
     <AddFlowContext.Provider value={{ loggedIn, intent, openAdd }}>
-      {children}
+      <div className={kind ? "hidden" : undefined}>{children}</div>
       {picker ? (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-[#2F2A24]/40 sm:items-center sm:p-4"

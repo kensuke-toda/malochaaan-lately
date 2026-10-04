@@ -551,15 +551,9 @@ function AddPinModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[#2F2A24]/40 p-0 sm:items-center sm:p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !pending) onClose();
-      }}
-    >
+    <div className="min-h-dvh w-full bg-[#F4EEE4]">
       <form
-        data-add-sheet
-        className="w-full max-w-md rounded-t-2xl bg-[#F4EEE4] p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:rounded-2xl sm:pb-6"
+        className="mx-auto w-full max-w-md px-6 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
         onSubmit={handleSubmit}
       >
         <div className="mb-4 flex items-center justify-between">

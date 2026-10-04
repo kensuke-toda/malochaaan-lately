@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ChangeEvent } from "react";
 
-const ACCEPT = "image/*";
+const ACCEPT = "image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif";
 
 async function copyFile(file: File) {
   const bytes = await file.arrayBuffer();
@@ -22,18 +22,9 @@ export function useModalScrollLock() {
     };
     html.style.overflow = "visible";
     body.style.overflow = "visible";
-    const blockBackground = (event: Event) => {
-      const target = event.target;
-      if (target instanceof Element && target.closest("[data-add-sheet]")) return;
-      event.preventDefault();
-    };
-    document.addEventListener("touchmove", blockBackground, { passive: false });
-    document.addEventListener("wheel", blockBackground, { passive: false });
     return () => {
       html.style.overflow = prev.htmlOverflow;
       body.style.overflow = prev.bodyOverflow;
-      document.removeEventListener("touchmove", blockBackground);
-      document.removeEventListener("wheel", blockBackground);
     };
   }, []);
 }
@@ -66,7 +57,8 @@ function FileButton({
   }
 
   return (
-    <div className="relative flex min-h-11 items-center justify-center">
+    <div>
+      <p className="mb-1 text-center text-sm font-semibold text-[#2F2A24]">{title}</p>
       <input
         type="file"
         accept={ACCEPT}
@@ -74,9 +66,8 @@ function FileButton({
         multiple={multiple ? true : undefined}
         aria-label={title}
         onChange={handleChange}
-        className="absolute inset-0 z-10 block h-full w-full cursor-pointer text-base text-transparent file:h-full file:w-full file:cursor-pointer file:rounded-full file:border-0 file:bg-[#2F2A24] file:text-transparent"
+        className="block w-full min-h-11 rounded-full bg-[#2F2A24] text-base text-[#2F2A24] file:w-full file:min-h-11 file:cursor-pointer file:rounded-full file:border-0 file:bg-[#2F2A24] file:px-3 file:text-sm file:font-semibold file:text-[#F4EEE4]"
       />
-      <span className="pointer-events-none relative z-20 text-sm font-semibold text-[#F4EEE4]">{title}</span>
     </div>
   );
 }
