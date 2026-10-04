@@ -558,6 +558,7 @@ function AddPinModal({
       }}
     >
       <form
+        data-add-sheet
         className="w-full max-w-md rounded-t-2xl bg-[#F4EEE4] p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:rounded-2xl sm:pb-6"
         onSubmit={handleSubmit}
       >
