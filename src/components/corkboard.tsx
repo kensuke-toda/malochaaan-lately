@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { createPinAction, deletePinAction, updatePinLayoutAction } from "@/app/actions";
+import { PhotoField } from "@/components/photo-field";
 import { authorName } from "@/lib/utils";
 import type { Pin, Profile } from "@/types";
 
@@ -521,17 +522,19 @@ function AddPinModal({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [fileHint, setFileHint] = useState("まだ選んでいません");
+  const [photos, setPhotos] = useState<File[]>([]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    const image = photos[0];
+    if (!image) {
+      setError("写真は必須です");
+      return;
+    }
     setPending(true);
     const fd = new FormData(e.currentTarget);
-    const image = fd.get("image");
-    if (image instanceof File && image.size > 0) {
-      fd.set("image", await preparePinImage(image));
-    }
+    fd.set("image", await preparePinImage(image));
     try {
       const result = await createPinAction(fd);
       if (result?.error) {
@@ -567,45 +570,7 @@ function AddPinModal({
         <input type="hidden" name="y" value={defaultY} />
         <input type="hidden" name="rotation" value={defaultRotation} />
         <div className="flex flex-col gap-3">
-          <div className="relative rounded-xl border border-dashed border-[#2F2A24]/30 bg-[#E8DFD0] px-3 py-4 text-center">
-            <div className="pointer-events-none flex flex-col items-center justify-center gap-1">
-              <span className="text-sm font-medium">写真を選択</span>
-              <span className="max-w-full truncate text-xs text-[#6B6258]">{fileHint}</span>
-              <span className="text-[11px] leading-relaxed text-[#6B6258]">チェックしたあと、右上の「追加」で確定</span>
-            </div>
-            <input
-              name="image"
-              type="file"
-              accept="image/*"
-              multiple
-              required
-              className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-              onPointerDown={(event) => {
-                const html = document.documentElement;
-                const body = document.body;
-                const prevHtml = html.style.overflow;
-                const prevBody = body.style.overflow;
-                html.style.overflow = "visible";
-                body.style.overflow = "visible";
-                const restore = () => {
-                  html.style.overflow = prevHtml;
-                  body.style.overflow = prevBody;
-                };
-                event.currentTarget.addEventListener("change", restore, { once: true });
-                event.currentTarget.addEventListener("cancel", restore, { once: true });
-              }}
-              onChange={(e) => {
-                const input = e.currentTarget;
-                if (input.files && input.files.length > 1) {
-                  const transfer = new DataTransfer();
-                  transfer.items.add(input.files[0]);
-                  input.files = transfer.files;
-                }
-                const file = input.files?.[0];
-                setFileHint(file ? file.name : "まだ選んでいません");
-              }}
-            />
-          </div>
+          <PhotoField label="写真を選択" files={photos} onFiles={setPhotos} />
           <input name="memo" placeholder="メモ（任意）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
           {error ? <p className="text-sm text-[#B85C38]">{error}</p> : null}
           <button

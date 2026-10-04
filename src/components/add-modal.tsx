@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent, type PointerEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   createBookAction,
@@ -14,6 +14,7 @@ import {
   type BookLookupResult,
 } from "@/app/actions";
 import { BookIsbnLookup } from "@/components/book-isbn-lookup";
+import { PhotoField } from "@/components/photo-field";
 import { todayKey } from "@/lib/utils";
 import type { Intent } from "@/types";
 
@@ -102,90 +103,6 @@ function BookFields({ disabled, intent }: { disabled: boolean; intent: Intent })
   );
 }
 
-function holdPageOverflow() {
-  const html = document.documentElement;
-  const body = document.body;
-  const prevHtml = html.style.overflow;
-  const prevBody = body.style.overflow;
-  html.style.overflow = "visible";
-  body.style.overflow = "visible";
-  let restored = false;
-  return () => {
-    if (restored) return;
-    restored = true;
-    html.style.overflow = prevHtml;
-    body.style.overflow = prevBody;
-  };
-}
-
-function FileField({ name, label, multiple }: { name: string; label: string; multiple?: boolean }) {
-  const [hint, setHint] = useState("まだ選んでいません");
-  const [preview, setPreview] = useState<string | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (preview) URL.revokeObjectURL(preview);
-    };
-  }, [preview]);
-
-  function showFiles(files: FileList | null) {
-    if (!files?.length) {
-      setHint("まだ選んでいません");
-      setPreview((current) => {
-        if (current) URL.revokeObjectURL(current);
-        return null;
-      });
-      return;
-    }
-    setHint(files.length === 1 ? files[0].name : `${files.length} 枚選択中`);
-    setPreview((current) => {
-      if (current) URL.revokeObjectURL(current);
-      return URL.createObjectURL(files[0]);
-    });
-  }
-
-  function preparePicker(event: PointerEvent<HTMLInputElement>) {
-    const restore = holdPageOverflow();
-    const input = event.currentTarget;
-    input.addEventListener("change", () => restore(), { once: true });
-    input.addEventListener("cancel", () => restore(), { once: true });
-    window.setTimeout(restore, 120000);
-  }
-
-  function onFiles(event: FormEvent<HTMLInputElement>) {
-    const input = event.currentTarget;
-    if (!multiple && input.files && input.files.length > 1) {
-      const transfer = new DataTransfer();
-      transfer.items.add(input.files[0]);
-      input.files = transfer.files;
-    }
-    showFiles(input.files);
-  }
-
-  return (
-    <div className="relative rounded-xl border border-dashed border-[#2F2A24]/30 bg-[#E8DFD0] px-3 py-4 text-center">
-      <div className="pointer-events-none flex flex-col items-center justify-center gap-1">
-        {preview ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="" className="mb-1 h-24 w-24 rounded-lg object-cover" />
-        ) : null}
-        <span className="text-sm font-medium text-[#2F2A24]">{label}</span>
-        <span className="max-w-full truncate text-xs leading-relaxed text-[#6B6258]">{hint}</span>
-        <span className="text-[11px] leading-relaxed text-[#6B6258]">チェックしたあと、右上の「追加」で確定</span>
-      </div>
-      <input
-        name={name}
-        type="file"
-        accept="image/*"
-        multiple
-        className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-        onPointerDown={preparePicker}
-        onChange={onFiles}
-      />
-    </div>
-  );
-}
-
 export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: Intent; onClose: () => void }) {
   const want = intent === "want";
   const [error, setError] = useState<string | null>(null);
@@ -223,22 +140,19 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
   };
   const today = todayKey();
   const router = useRouter();
+  const [photos, setPhotos] = useState<File[]>([]);
+  const photoKey = kind === "post" ? "photos" : "image";
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setPending(true);
     const fd = new FormData(e.currentTarget);
+    fd.delete("image");
+    fd.delete("photos");
     try {
-      for (const key of ["image", "photos"] as const) {
-        const values = fd.getAll(key);
-        if (!values.some((value) => value instanceof File && value.size > 0)) continue;
-        fd.delete(key);
-        for (const value of values) {
-          if (value instanceof File && value.size > 0) {
-            fd.append(key, await compressImage(value));
-          }
-        }
+      for (const file of photos) {
+        fd.append(photoKey, await compressImage(file));
       }
       const result = await actions[kind](fd);
       if (result?.error) {
@@ -261,15 +175,14 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
         if (e.target === e.currentTarget && !pending) onClose();
       }}
     >
-      <div className="flex max-h-[min(calc(100dvh-env(safe-area-inset-top)),46rem)] min-h-0 w-full max-w-md flex-col rounded-t-2xl bg-[#F4EEE4] sm:rounded-2xl">
-        <div className="flex items-center justify-between px-6 pt-6">
+      <div className="max-h-[min(calc(100dvh-env(safe-area-inset-top)),46rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl bg-[#F4EEE4] p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:rounded-2xl sm:pb-6">
+        <div className="mb-4 flex items-center justify-between">
           <h3 className="font-display text-lg font-semibold">{titles[kind]}</h3>
           <button type="button" onClick={onClose} disabled={pending} className="min-h-11 min-w-11 text-[#6B6258]">
             ✕
           </button>
         </div>
-        <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-6 py-4">
+        <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
           <input type="hidden" name="intent" value={intent} />
           {kind === "place" && (
             <>
@@ -279,6 +192,7 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
                 <input name="visited_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               )}
               <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <PhotoField label="お店の写真を選択" files={photos} onFiles={setPhotos} />
             </>
           )}
           {kind === "thing" && (
@@ -287,15 +201,22 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
               <input name="brand" placeholder="ブランド名" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <input name="product_url" type="url" placeholder="商品ページURL" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <PhotoField label="写真を選択" files={photos} onFiles={setPhotos} />
             </>
           )}
-          {kind === "book" && <BookFields disabled={pending} intent={intent} />}
+          {kind === "book" && (
+            <>
+              <BookFields disabled={pending} intent={intent} />
+              <PhotoField label="カバー画像を選択" files={photos} onFiles={setPhotos} />
+            </>
+          )}
           {kind === "sound" && (
             <>
               <input name="title" required placeholder="曲名（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <input name="artist" placeholder="アーティスト" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <input name="url" type="url" placeholder="リンク" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <PhotoField label="ジャケット画像を選択" files={photos} onFiles={setPhotos} />
             </>
           )}
           {kind === "podcast" && (
@@ -304,6 +225,7 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
               <input name="artist" placeholder="番組・ホスト" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <input name="url" type="url" placeholder="リンク" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <textarea name="memo" placeholder="メモ" rows={2} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <PhotoField label="カバー画像を選択" files={photos} onFiles={setPhotos} />
             </>
           )}
           {kind === "post" && (
@@ -318,12 +240,14 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
               {want ? null : (
                 <input name="entry_date" type="date" defaultValue={today} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               )}
+              <PhotoField label="写真を選択（複数可）" multiple files={photos} onFiles={setPhotos} />
             </>
           )}
           {kind === "movie" && (
             <>
               <input name="title" required placeholder="タイトル（必須）" className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
               <textarea name="body" placeholder={want ? "なぜ観たいか" : "感想"} rows={3} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
+              <PhotoField label="写真を選択" files={photos} onFiles={setPhotos} />
             </>
           )}
           {kind === "work" && (
@@ -333,22 +257,14 @@ export function AddModal({ kind, intent, onClose }: { kind: ModalKind; intent: I
               <textarea name="summary" placeholder="サマリ" rows={4} className="w-full min-w-0 rounded-xl bg-[#E8DFD0] px-3 py-2.5 text-base" />
             </>
           )}
-          </div>
-          <div className="flex flex-col gap-3 px-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">
-            {kind === "place" ? <FileField name="image" label="お店の写真を選択" /> : null}
-            {kind === "thing" || kind === "movie" ? <FileField name="image" label="写真を選択" /> : null}
-            {kind === "book" || kind === "podcast" ? <FileField name="image" label="カバー画像を選択" /> : null}
-            {kind === "sound" ? <FileField name="image" label="ジャケット画像を選択" /> : null}
-            {kind === "post" ? <FileField name="photos" label="写真を選択（複数可）" multiple /> : null}
-            {error ? <p className="text-sm text-[#B85C38]">{error}</p> : null}
-            <button
-              type="submit"
-              disabled={pending}
-              className="min-h-11 rounded-full bg-[#B85C38] px-4 py-2.5 text-sm font-semibold text-[#F4EEE4] disabled:opacity-60"
-            >
-              {pending ? "追加中…" : "追加する"}
-            </button>
-          </div>
+          {error ? <p className="text-sm text-[#B85C38]">{error}</p> : null}
+          <button
+            type="submit"
+            disabled={pending}
+            className="min-h-11 rounded-full bg-[#B85C38] px-4 py-2.5 text-sm font-semibold text-[#F4EEE4] disabled:opacity-60"
+          >
+            {pending ? "追加中…" : "追加する"}
+          </button>
         </form>
       </div>
     </div>
