@@ -23,6 +23,19 @@ type Config = {
 let config: Config | null = null;
 let taking = false;
 
+function isAppleTouchDevice() {
+  if (typeof navigator === "undefined") return false;
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+/**
+ * iOS single-select often shows a checkmark with no way to confirm (no 追加).
+ * Forcing multiple reveals the top-right 追加 button; we still keep 1 file in app logic.
+ */
+function libraryNeedsMultipleAttribute(allowMultiple: boolean) {
+  return allowMultiple || isAppleTouchDevice();
+}
+
 function resolveDraftKey() {
   if (config?.draftKey) return config.draftKey;
   const kind = readAddKind();
@@ -109,7 +122,8 @@ function ensureLibraryInput() {
   input.type = "file";
   // Include HEIC explicitly — camera roll photos on iPhone are often HEIC/HEIF.
   input.accept = "image/*,image/heic,image/heif,.heic,.heif";
-  input.multiple = false;
+  // Default on for iPhone so the first open already has 追加 available.
+  input.multiple = isAppleTouchDevice();
   input.setAttribute("autocomplete", "off");
   styleHidden(input);
   document.documentElement.appendChild(input);
@@ -140,7 +154,7 @@ export function bindPhotoPicker(next: PhotoPickerReceiver | null) {
   ensureCameraInput();
   if (next) {
     config = next;
-    library.multiple = next.allowMultiple;
+    library.multiple = libraryNeedsMultipleAttribute(next.allowMultiple);
   } else if (config) {
     // Keep draft key across unmounts so a late change event is not dropped.
     config = { ...config, onPicked: null };

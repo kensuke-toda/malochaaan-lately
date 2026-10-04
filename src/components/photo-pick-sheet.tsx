@@ -188,7 +188,10 @@ export function PhotoPickSheet({
               </label>
             </div>
             <p className="text-[11px] leading-relaxed text-[#F4EEE4]/45">
-              写真を選んだら右上のチェック（または「追加」）を押してください。カメラ写真は読み込みに数秒かかることがあります。うまくいかない写真は、一度「写真」アプリで開いてから選び直してください。
+              {allowMultiple
+                ? "写真にチェックを付けたら、右上の「追加」を押してください。"
+                : "写真を1枚チェックしたら、右上の「追加」を押してください。写真の青チェックだけでは戻りません。"}
+              カメラ写真は読み込みに数秒かかることがあります。
             </p>
             {loading ? <p className="text-sm font-medium text-[#F4EEE4]">読み込み中…</p> : null}
             {error ? <p className="text-sm leading-relaxed text-[#F0A090]">{error}</p> : null}
