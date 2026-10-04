@@ -1,85 +1,76 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useState, type PointerEvent } from "react";
 
-type Box = { top: number; left: number; width: number; height: number };
-
-function OverlayFileInput({
-  target,
-  camera,
-  multiple,
-  ticket,
-  onFiles,
-  onPicked,
-}: {
-  target: HTMLElement | null;
-  camera?: boolean;
-  multiple?: boolean;
-  ticket: number;
-  onFiles: (files: File[]) => void;
-  onPicked: () => void;
-}) {
-  const [box, setBox] = useState<Box | null>(null);
-
-  useLayoutEffect(() => {
-    if (!target) return;
-    const update = () => {
-      const rect = target.getBoundingClientRect();
-      setBox({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
-    };
-    update();
-    window.addEventListener("resize", update);
-    window.addEventListener("scroll", update, true);
-    return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update, true);
-    };
-  }, [target, ticket]);
-
-  if (!box) return null;
-
-  return createPortal(
-    <input
-      key={ticket}
-      type="file"
-      accept="image/jpeg,image/png,image/heic,image/heif,image/webp"
-      multiple={multiple}
-      onChange={(e) => {
-        const next = e.target.files ? Array.from(e.target.files) : [];
-        if (next.length) onFiles(multiple ? next : next.slice(0, 1));
-        e.target.blur();
-        e.target.value = "";
-        onPicked();
-      }}
-      ref={(el) => {
-        if (!el) return;
-        if (camera) el.setAttribute("capture", "environment");
-        else el.removeAttribute("capture");
-      }}
-      style={{
-        position: "fixed",
-        top: box.top,
-        left: box.left,
-        width: Math.max(box.width, 44),
-        height: Math.max(box.height, 44),
-        opacity: 0.01,
-        zIndex: 80,
-        fontSize: 16,
-      }}
-    />,
-    document.body,
-  );
+function releaseAncestors(start: HTMLElement) {
+  const saved: { el: HTMLElement; css: string }[] = [];
+  let el: HTMLElement | null = start.parentElement;
+  while (el) {
+    saved.push({ el, css: el.style.cssText });
+    el.style.setProperty("overflow", "visible", "important");
+    el.style.setProperty("overflow-x", "visible", "important");
+    el.style.setProperty("overflow-y", "visible", "important");
+    const position = getComputedStyle(el).position;
+    if (position === "fixed" || position === "sticky") {
+      el.style.setProperty("position", "absolute", "important");
+    }
+    if (getComputedStyle(el).transform !== "none") {
+      el.style.setProperty("transform", "none", "important");
+    }
+    el = el.parentElement;
+  }
+  let restored = false;
+  return () => {
+    if (restored) return;
+    restored = true;
+    for (const item of saved.reverse()) item.el.style.cssText = item.css;
+  };
 }
 
-function Choice({ children, buttonRef }: { children: ReactNode; buttonRef: (node: HTMLSpanElement | null) => void }) {
+function PhotoButton({
+  title,
+  camera,
+  multiple,
+  onFiles,
+}: {
+  title: string;
+  camera?: boolean;
+  multiple?: boolean;
+  onFiles: (files: File[]) => void;
+}) {
+  function prepare(event: PointerEvent<HTMLInputElement>) {
+    const restore = releaseAncestors(event.currentTarget);
+    event.currentTarget.addEventListener("change", () => restore(), { once: true });
+    event.currentTarget.addEventListener("cancel", () => restore(), { once: true });
+    window.setTimeout(() => {
+      window.addEventListener("focus", () => window.setTimeout(restore, 600), { once: true });
+    }, 800);
+  }
+
   return (
-    <span
-      ref={buttonRef}
-      className="relative flex min-h-11 flex-1 items-center justify-center rounded-full bg-[#2F2A24] px-3 text-sm font-semibold text-[#F4EEE4]"
-    >
-      {children}
-    </span>
+    <div className="relative block min-h-11">
+      <span className="pointer-events-none flex min-h-11 items-center justify-center rounded-full bg-[#2F2A24] px-3 text-sm font-semibold text-[#F4EEE4]">
+        {title}
+      </span>
+      <input
+        type="file"
+        accept="image/*"
+        multiple={multiple ? true : undefined}
+        aria-label={title}
+        className="absolute inset-0 z-10 h-full w-full cursor-pointer text-base opacity-[0.02]"
+        ref={(el) => {
+          if (!el) return;
+          if (camera) el.setAttribute("capture", "environment");
+          else el.removeAttribute("capture");
+        }}
+        onPointerDown={prepare}
+        onChange={(e) => {
+          const picked = e.target.files ? Array.from(e.target.files) : [];
+          e.target.value = "";
+          if (picked.length) onFiles(multiple ? picked : picked.slice(0, 1));
+        }}
+      />
+    </div>
   );
 }
 
@@ -94,12 +85,7 @@ export function PhotoField({
   files: File[];
   onFiles: (files: File[]) => void;
 }) {
-  const [ticket, setTicket] = useState(0);
-  const [cameraEl, setCameraEl] = useState<HTMLSpanElement | null>(null);
-  const [libraryEl, setLibraryEl] = useState<HTMLSpanElement | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const cameraRef = useRef<HTMLSpanElement | null>(null);
-  const libraryRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
     if (!files[0]) {
@@ -123,18 +109,6 @@ export function PhotoField({
       ? files[0].name
       : `${files.length} 枚選択中`;
 
-  function remember(kind: "camera" | "library") {
-    return (node: HTMLSpanElement | null) => {
-      if (kind === "camera") {
-        cameraRef.current = node;
-        setCameraEl(node);
-      } else {
-        libraryRef.current = node;
-        setLibraryEl(node);
-      }
-    };
-  }
-
   return (
     <div className="rounded-xl border border-dashed border-[#2F2A24]/30 bg-[#E8DFD0] px-3 py-4 text-center">
       <div className="flex flex-col items-center justify-center gap-1">
@@ -145,24 +119,10 @@ export function PhotoField({
         <span className="text-sm font-medium text-[#2F2A24]">{label}</span>
         <span className="max-w-full truncate text-xs leading-relaxed text-[#6B6258]">{hint}</span>
       </div>
-      <div className="mt-3 flex gap-2">
-        <Choice buttonRef={remember("camera")}>写真を撮る</Choice>
-        <Choice buttonRef={remember("library")}>ライブラリから選ぶ</Choice>
+      <div className="mt-3 flex flex-col gap-2">
+        <PhotoButton title="写真を撮る" camera onFiles={onFiles} />
+        <PhotoButton title={multiple ? "ライブラリから選ぶ（複数可）" : "ライブラリから選ぶ"} multiple={multiple} onFiles={onFiles} />
       </div>
-      <OverlayFileInput
-        target={cameraEl}
-        camera
-        ticket={ticket}
-        onFiles={onFiles}
-        onPicked={() => setTicket((value) => value + 1)}
-      />
-      <OverlayFileInput
-        target={libraryEl}
-        multiple={multiple}
-        ticket={ticket}
-        onFiles={onFiles}
-        onPicked={() => setTicket((value) => value + 1)}
-      />
     </div>
   );
 }
